@@ -1,0 +1,124 @@
+# BiTek AI Security Guard Translation Template
+# Copyright (C) 2025 BiTek Security
+# This file is distributed under the same license as the BiTek AI Security Guard package.
+msgid ""
+msgstr ""
+"Project-Id-Version: BiTek AI Security Guard 1.0.0\n"
+"Report-Msgid-Bugs-To: https://github.com/bitek/ai-security-guard/issues\n"
+"POT-Creation-Date: 2025-01-01 12:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Your comment contains unsafe or spam content and cannot be posted."
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Comment Blocked"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Blocked keyword: %s"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "AI detected harmful content (score: %.2f)"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "BiTek AI Security Guard"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "AI Security Guard"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Security Settings"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Enable AI Filtering"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "HuggingFace API Key"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "AI Model"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "AI Threshold (0.0 - 1.0)"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Enable Keyword Filtering"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Blocked Keywords (one per line)"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Blocked Comment Message"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Enable Logging"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "BiTek AI Security Guard Settings"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "API Test"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Test your HuggingFace API connection:"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Test API Connection"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "API connection failed. Please check your API key."
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "API connection successful!"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Log Statistics"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "No logs found yet."
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Blocked Comments:"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Errors:"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Log File Size:"
+msgstr ""
+
+#: bitek-ai-security-guard.php:xxx
+msgid "Configure your AI Security Guard settings below."
+msgstr ""

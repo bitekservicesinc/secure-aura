@@ -3,7 +3,7 @@
  * Security protection file
  * Prevents direct access to the plugin directory
  * 
- * @package BiTekAISecurityGuard
+ * @package SecureAura
  * @since 1.0.0
  */
 

@@ -1,0 +1,1029 @@
+/**
+ * SecureAura Admin Styles
+ * Professional, modern WordPress admin interface
+ * 
+ * @package SecureAura
+ * @version 3.0.0
+ */
+
+/* ==========================================================================
+   CSS Custom Properties (Variables)
+   ========================================================================== */
+
+:root {
+    /* Colors */
+    --sa-primary: #2271b1;
+    --sa-primary-dark: #135e96;
+    --sa-primary-light: #72aee6;
+    --sa-success: #00a32a;
+    --sa-success-light: #68de7c;
+    --sa-warning: #dba617;
+    --sa-warning-light: #ffb900;
+    --sa-danger: #d63638;
+    --sa-danger-light: #ff6b6b;
+    --sa-info: #72aee6;
+    --sa-info-light: #a7d0f0;
+    
+    /* Background Colors */
+    --sa-bg-primary: #ffffff;
+    --sa-bg-secondary: #f6f7f7;
+    --sa-bg-tertiary: #f0f0f1;
+    --sa-bg-dark: #1d2327;
+    --sa-bg-light: #fafafa;
+    
+    /* Text Colors */
+    --sa-text-primary: #1d2327;
+    --sa-text-secondary: #646970;
+    --sa-text-muted: #8c8f94;
+    --sa-text-light: #ffffff;
+    
+    /* Border Colors */
+    --sa-border: #c3c4c7;
+    --sa-border-light: #dcdcde;
+    --sa-border-dark: #8c8f94;
+    --sa-border-focus: #2271b1;
+    
+    /* Shadows */
+    --sa-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --sa-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --sa-shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+    --sa-shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.1);
+    
+    /* Border Radius */
+    --sa-radius-sm: 4px;
+    --sa-radius-md: 6px;
+    --sa-radius-lg: 8px;
+    --sa-radius-xl: 12px;
+    --sa-radius-full: 50%;
+    
+    /* Spacing */
+    --sa-spacing-xs: 4px;
+    --sa-spacing-sm: 8px;
+    --sa-spacing-md: 16px;
+    --sa-spacing-lg: 24px;
+    --sa-spacing-xl: 32px;
+    --sa-spacing-xxl: 48px;
+    
+    /* Typography */
+    --sa-font-size-xs: 11px;
+    --sa-font-size-sm: 12px;
+    --sa-font-size-md: 13px;
+    --sa-font-size-lg: 14px;
+    --sa-font-size-xl: 16px;
+    --sa-font-size-xxl: 18px;
+    --sa-font-size-xxxl: 24px;
+    
+    /* Transitions */
+    --sa-transition: all 0.2s ease-in-out;
+    --sa-transition-fast: all 0.15s ease-in-out;
+    --sa-transition-slow: all 0.3s ease-in-out;
+    
+    /* Z-indexes */
+    --sa-z-dropdown: 1000;
+    --sa-z-modal: 10000;
+    --sa-z-tooltip: 10001;
+}
+
+/* ==========================================================================
+   Base Styles & Reset
+   ========================================================================== */
+
+.secure-aura-dashboard *,
+.secure-aura-dashboard *::before,
+.secure-aura-dashboard *::after {
+    box-sizing: border-box;
+}
+
+.secure-aura-dashboard {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    font-size: var(--sa-font-size-md);
+    line-height: 1.6;
+    color: var(--sa-text-primary);
+    background-color: var(--sa-bg-secondary);
+    margin: 20px 0;
+}
+
+/* ==========================================================================
+   Header Section
+   ========================================================================== */
+
+.secure-aura-header {
+    background: linear-gradient(135deg, var(--sa-primary) 0%, var(--sa-primary-dark) 100%);
+    color: var(--sa-text-light);
+    padding: var(--sa-spacing-lg);
+    border-radius: var(--sa-radius-lg);
+    margin-bottom: var(--sa-spacing-xl);
+    box-shadow: var(--sa-shadow-md);
+}
+
+.secure-aura-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sa-spacing-md);
+}
+
+.secure-aura-logo {
+    display: flex;
+    align-items: center;
+    gap: var(--sa-spacing-md);
+}
+
+.secure-aura-logo img {
+    filter: brightness(0) invert(1);
+}
+
+.secure-aura-logo h1 {
+    margin: 0;
+    font-size: var(--sa-font-size-xxxl);
+    font-weight: 600;
+    color: var(--sa-text-light);
+}
+
+.secure-aura-version {
+    background: rgba(255, 255, 255, 0.2);
+    padding: var(--sa-spacing-xs) var(--sa-spacing-sm);
+    border-radius: var(--sa-radius-full);
+    font-size: var(--sa-font-size-xs);
+    font-weight: 500;
+}
+
+.secure-aura-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sa-spacing-md);
+    flex-wrap: wrap;
+}
+
+.secure-aura-emergency-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--sa-spacing-xs);
+    background: rgba(219, 166, 23, 0.9);
+    color: var(--sa-text-light);
+    padding: var(--sa-spacing-sm) var(--sa-spacing-md);
+    border-radius: var(--sa-radius-md);
+    font-weight: 500;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* ==========================================================================
+   Status Grid Cards
+   ========================================================================== */
+
+.secure-aura-status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--sa-spacing-lg);
+    margin-bottom: var(--sa-spacing-xl);
+}
+
+.secure-aura-card {
+    background: var(--sa-bg-primary);
+    border: 1px solid var(--sa-border-light);
+    border-radius: var(--sa-radius-lg);
+    box-shadow: var(--sa-shadow-sm);
+    transition: var(--sa-transition);
+    overflow: hidden;
+}
+
+.secure-aura-card:hover {
+    box-shadow: var(--sa-shadow-md);
+    transform: translateY(-2px);
+}
+
+.secure-aura-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--sa-spacing-lg);
+    background: var(--sa-bg-secondary);
+    border-bottom: 1px solid var(--sa-border-light);
+}
+
+.secure-aura-card-header h3 {
+    margin: 0;
+    font-size: var(--sa-font-size-lg);
+    font-weight: 600;
+    color: var(--sa-text-primary);
+}
+
+.secure-aura-card-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--sa-primary);
+    border-radius: var(--sa-radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sa-text-light);
+}
+
+.secure-aura-card-icon .dashicons {
+    font-size: 20px;
+}
+
+.secure-aura-card-body {
+    padding: var(--sa-spacing-lg);
+}
+
+/* Security Score Card */
+.secure-aura-security-score .secure-aura-card-icon {
+    background: linear-gradient(135deg, var(--sa-success) 0%, var(--sa-success-light) 100%);
+}
+
+.secure-aura-score-display {
+    display: flex;
+    align-items: center;
+    gap: var(--sa-spacing-lg);
+}
+
+.secure-aura-score-circle {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: var(--sa-radius-full);
+    background: conic-gradient(var(--sa-success) 0deg, var(--sa-success) calc(var(--score, 75) * 3.6deg), var(--sa-border-light) calc(var(--score, 75) * 3.6deg));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.secure-aura-score-circle::before {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    background: var(--sa-bg-primary);
+    border-radius: var(--sa-radius-full);
+}
+
+.secure-aura-score-number {
+    position: relative;
+    font-size: var(--sa-font-size-xxl);
+    font-weight: 700;
+    color: var(--sa-text-primary);
+}
+
+.secure-aura-score-percent {
+    position: relative;
+    font-size: var(--sa-font-size-sm);
+    color: var(--sa-text-secondary);
+    margin-left: 2px;
+}
+
+.secure-aura-score-details {
+    flex: 1;
+}
+
+.secure-aura-score-status {
+    font-size: var(--sa-font-size-lg);
+    font-weight: 600;
+    margin: 0 0 var(--sa-spacing-xs) 0;
+}
+
+.secure-aura-score-status.excellent {
+    color: var(--sa-success);
+}
+
+.secure-aura-score-status.good {
+    color: var(--sa-info);
+}
+
+.secure-aura-score-status.warning {
+    color: var(--sa-warning);
+}
+
+.secure-aura-score-status.critical {
+    color: var(--sa-danger);
+}
+
+.secure-aura-score-description {
+    font-size: var(--sa-font-size-sm);
+    color: var(--sa-text-secondary);
+    margin: 0;
+}
+
+/* Threats Blocked Card */
+.secure-aura-threats-blocked .secure-aura-card-icon {
+    background: linear-gradient(135deg, var(--sa-danger) 0%, var(--sa-danger-light) 100%);
+}
+
+.secure-aura-stat-large {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--sa-text-primary);
+    line-height: 1;
+    margin-bottom: var(--sa-spacing-sm);
+}
+
+.secure-aura-stat-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--sa-spacing-sm);
+}
+
+.secure-aura-stat-label {
+    font-size: var(--sa-font-size-sm);
+    color: var(--sa-text-secondary);
+}
+
+.secure-aura-stat-change {
+    display: flex;
+    align-items: center;
+    gap: var(--sa-spacing-xs);
+    font-size: var(--sa-font-size-sm);
+    font-weight: 500;
+}
+
+.secure-aura-stat-change.positive {
+    color: var(--sa-success);
+}
+
+.secure-aura-stat-change.negative {
+    color: var(--sa-danger);
+}
+
+.secure-aura-stat-change.neutral {
+    color: var(--sa-text-secondary);
+}
+
+.secure-aura-stat-total {
+    font-size: var(--sa-font-size-xs);
+    color: var(--sa-text-muted);
+}
+
+/* Last Scan Card */
+.secure-aura-last-scan .secure-aura-card-icon {
+    background: linear-gradient(135deg, var(--sa-info) 0%, var(--sa-info-light) 100%);
+}
+
+.secure-aura-scan-info {
+    text-align: center;
+}
+
+.secure-aura-scan-date {
+    font-size: var(--sa-font-size-xl);
+    font-weight: 600;
+    color: var(--sa-text-primary);
+    margin-bottom: var(--sa-spacing-sm);
+}
+
+.secure-aura-scan-results {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--sa-spacing-md);
+    font-size: var(--sa-font-size-sm);
+}
+
+.secure-aura-scan-files {
+    color: var(--sa-text-secondary);
+}
+
+.secure-aura-scan-threats.threat-found {
+    color: var(--sa-danger);
+    font-weight: 500;
+}
+
+.secure-aura-scan-threats.no-threats {
+    color: var(--sa-success);
+    font-weight: 500;
+}
+
+.secure-aura-no-scan {
+    text-align: center;
+    padding: var(--sa-spacing-lg);
+}
+
+.secure-aura-no-scan p {
+    margin: 0 0 var(--sa-spacing-md) 0;
+    color: var(--sa-text-secondary);
+}
+
+/* Active Protection Card */
+.secure-aura-active-protection .secure-aura-card-icon {
+    background: linear-gradient(135deg, var(--sa-warning) 0%, var(--sa-warning-light) 100%);
+}
+
+.secure-aura-protection-modules {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sa-spacing-sm);
+}
+
+.secure-aura-module {
+    display: flex;
+    align-items: center;
+    gap: var(--sa-spacing-md);
+    padding: var(--sa-spacing-sm);
+    border-radius: var(--sa-radius-md);
+    transition: var(--sa-transition);
+}
+
+.secure-aura-module:hover {
+    background: var(--sa-bg-secondary);
+}
+
+.secure-aura-module.enabled .secure-aura-module-status {
+    color: var(--sa-success);
+}
+
+.secure-aura-module.disabled .secure-aura-module-status {
+    color: var(--sa-text-muted);
+}
+
+.secure-aura-module-name {
+    font-size: var(--sa-font-size-sm);
+    font-weight: 500;
+    color: var(--sa-text-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--sa-spacing-xs);
+}
+
+.secure-aura-pro-badge {
+    background: linear-gradient(135deg, #ff6600, #ff8800);
+    color: var(--sa-text-light);
+    padding: 2px 6px;
+    border-radius: var(--sa-radius-sm);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* ==========================================================================
+   Dashboard Main Layout
+   ========================================================================== */
+
+.secure-aura-dashboard-main {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--sa-spacing-xl);
+    margin-bottom: var(--sa-spacing-xl);
+}
+
+@media (max-width: 1200px) {
+    .secure-aura-dashboard-main {
+        grid-template-columns: 1fr;
+    }
+}
+
+.secure-aura-dashboard-left,
+.secure-aura-dashboard-right {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sa-spacing-lg);
+}
+
+/* ==========================================================================
+   Activity Feed
+   ========================================================================== */
+
+.secure-aura-activity-feed .secure-aura-card-header {
+    position: relative;
+}
+
+.secure-aura-card-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sa-spacing-sm);
+}
+
+.secure-aura-live-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--sa-spacing-xs);
+    font-size: var(--sa-font-size-xs);
+    color: var(--sa-success);
+    font-weight: 500;
+}
+
+.secure-aura-pulse {
+    width: 8px;
+    height: 8px;
+    background: var(--sa-success);
+    border-radius: var(--sa-radius-full);
+    animation: pulse 2s infinite;
+}
+
+.secure-aura-activity-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.secure-aura-activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sa-spacing-md);
+    padding: var(--sa-spacing-md);
+    border-bottom: 1px solid var(--sa-border-light);
+    transition: var(--sa-transition);
+}
+
+.secure-aura-activity-item:last-child {
+    border-bottom: none;
+}
+
+.secure-aura-activity-item:hover {
+    background: var(--sa-bg-secondary);
+}
+
+.secure-aura-activity-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--sa-radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.secure-aura-activity-icon.success {
+    background: rgba(0, 163, 42, 0.1);
+    color: var(--sa-success);
+}
+
+.secure-aura-activity-icon.warning {
+    background: rgba(219, 166, 23, 0.1);
+    color: var(--sa-warning);
+}
+
+.secure-aura-activity-icon.danger {
+    background: rgba(214, 54, 56, 0.1);
+    color: var(--sa-danger);
+}
+
+.secure-aura-activity-icon.info {
+    background: rgba(114, 174, 230, 0.1);
+    color: var(--sa-info);
+}
+
+.secure-aura-activity-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.secure-aura-activity-title {
+    font-size: var(--sa-font-size-sm);
+    font-weight: 500;
+    color: var(--sa-text-primary);
+    margin: 0 0 var(--sa-spacing-xs) 0;
+}
+
+.secure-aura-activity-description {
+    font-size: var(--sa-font-size-xs);
+    color: var(--sa-text-secondary);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.secure-aura-activity-time {
+    font-size: var(--sa-font-size-xs);
+    color: var(--sa-text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Quick Actions Grid
+   ========================================================================== */
+
+.secure-aura-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--sa-spacing-md);
+}
+
+.secure-aura-action-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sa-spacing-sm);
+    padding: var(--sa-spacing-lg);
+    border: 1px solid var(--sa-border-light);
+    border-radius: var(--sa-radius-lg);
+    background: var(--sa-bg-primary);
+    color: var(--sa-text-primary);
+    text-decoration: none;
+    transition: var(--sa-transition);
+    cursor: pointer;
+    min-height: 80px;
+    justify-content: center;
+}
+
+.secure-aura-action-button:hover {
+    border-color: var(--sa-primary);
+    background: var(--sa-primary);
+    color: var(--sa-text-light);
+    transform: translateY(-2px);
+    box-shadow: var(--sa-shadow-md);
+}
+
+.secure-aura-action-button .dashicons {
+    font-size: 24px;
+}
+
+.secure-aura-action-label {
+    font-size: var(--sa-font-size-xs);
+    font-weight: 500;
+    text-align: center;
+    line-height: 1.2;
+}
+
+/* ==========================================================================
+   Charts and Analytics
+   ========================================================================== */
+
+.secure-aura-analytics .secure-aura-card-body {
+    padding: var(--sa-spacing-md);
+}
+
+.secure-aura-timeframe-select {
+    padding: var(--sa-spacing-xs) var(--sa-spacing-sm);
+    border: 1px solid var(--sa-border);
+    border-radius: var(--sa-radius-sm);
+    background: var(--sa-bg-primary);
+    color: var(--sa-text-primary);
+    font-size: var(--sa-font-size-xs);
+}
+
+/* ==========================================================================
+   System Health Monitor
+   ========================================================================== */
+
+.secure-aura-health-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--sa-spacing-xs);
+}
+
+.secure-aura-health-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--sa-radius-full);
+}
+
+.secure-aura-health-indicator.healthy .secure-aura-health-dot {
+    background: var(--sa-success);
+    animation: pulse 2s infinite;
+}
+
+.secure-aura-health-indicator.warning .secure-aura-health-dot {
+    background: var(--sa-warning);
+}
+
+.secure-aura-health-indicator.critical .secure-aura-health-dot {
+    background: var(--sa-danger);
+}
+
+.secure-aura-health-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sa-spacing-md);
+}
+
+.secure-aura-health-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--sa-spacing-sm);
+    border-radius: var(--sa-radius-md);
+    background: var(--sa-bg-secondary);
+}
+
+.secure-aura-metric-name {
+    font-size: var(--sa-font-size-sm);
+    color: var(--sa-text-primary);
+}
+
+.secure-aura-metric-value {
+    font-size: var(--sa-font-size-sm);
+    font-weight: 500;
+}
+
+.secure-aura-metric-value.good {
+    color: var(--sa-success);
+}
+
+.secure-aura-metric-value.warning {
+    color: var(--sa-warning);
+}
+
+.secure-aura-metric-value.critical {
+    color: var(--sa-danger);
+}
+
+/* ==========================================================================
+   Upgrade Prompts
+   ========================================================================== */
+
+.secure-aura-upgrade-prompt .secure-aura-card-body {
+    text-align: center;
+    padding: var(--sa-spacing-xxl);
+}
+
+.secure-aura-upgrade-content {
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.secure-aura-upgrade-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto var(--sa-spacing-lg);
+    background: linear-gradient(135deg, var(--sa-primary), var(--sa-primary-light));
+    border-radius: var(--sa-radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sa-text-light);
+}
+
+.secure-aura-upgrade-icon .dashicons {
+    font-size: 32px;
+}
+
+.secure-aura-upgrade-content h4 {
+    margin: 0 0 var(--sa-spacing-md) 0;
+    color: var(--sa-text-primary);
+}
+
+.secure-aura-upgrade-content p {
+    margin: 0 0 var(--sa-spacing-lg) 0;
+    color: var(--sa-text-secondary);
+    font-size: var(--sa-font-size-sm);
+}
+
+/* ==========================================================================
+   License Footer
+   ========================================================================== */
+
+.secure-aura-license-footer {
+    background: linear-gradient(135deg, #ff6600, #ff8800);
+    border-radius: var(--sa-radius-lg);
+    padding: var(--sa-spacing-xl);
+    margin-top: var(--sa-spacing-xl);
+}
+
+.secure-aura-license-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--sa-spacing-xl);
+    flex-wrap: wrap;
+}
+
+.secure-aura-license-content h4 {
+    color: var(--sa-text-light);
+    margin: 0 0 var(--sa-spacing-sm) 0;
+    font-size: var(--sa-font-size-xl);
+}
+
+.secure-aura-license-content p {
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0 0 var(--sa-spacing-md) 0;
+}
+
+.secure-aura-license-features {
+    display: flex;
+    gap: var(--sa-spacing-lg);
+    flex-wrap: wrap;
+}
+
+.secure-aura-feature {
+    display: flex;
+    align-items: center;
+    gap: var(--sa-spacing-xs);
+    color: var(--sa-text-light);
+    font-size: var(--sa-font-size-sm);
+    font-weight: 500;
+}
+
+.secure-aura-license-actions {
+    display: flex;
+    gap: var(--sa-spacing-md);
+    flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Modal System
+   ========================================================================== */
+
+.secure-aura-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: var(--sa-z-modal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--sa-transition);
+}
+
+.secure-aura-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.secure-aura-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+}
+
+.secure-aura-modal-container {
+    position: relative;
+    background: var(--sa-bg-primary);
+    border-radius: var(--sa-radius-lg);
+    box-shadow: var(--sa-shadow-xl);
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow: hidden;
+    transform: scale(0.9);
+    transition: var(--sa-transition);
+}
+
+.secure-aura-modal.active .secure-aura-modal-container {
+    transform: scale(1);
+}
+
+.secure-aura-modal-header {
+    padding: var(--sa-spacing-lg);
+    border-bottom: 1px solid var(--sa-border-light);
+    background: var(--sa-bg-secondary);
+}
+
+.secure-aura-modal-header h3 {
+    margin: 0;
+    font-size: var(--sa-font-size-xl);
+    font-weight: 600;
+    color: var(--sa-text-primary);
+}
+
+.secure-aura-modal-body {
+    padding: var(--sa-spacing-lg);
+    max-height: calc(90vh - 120px);
+    overflow-y: auto;
+}
+
+.secure-aura-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--sa-spacing-md);
+    margin-top: var(--sa-spacing-lg);
+    padding-top: var(--sa-spacing-lg);
+    border-top: 1px solid var(--sa-border-light);
+}
+
+/* ==========================================================================
+   Progress Bars
+   ========================================================================== */
+
+.secure-aura-progress-bar {
+    width: 100%;
+    height: 20px;
+    background: var(--sa-bg-secondary);
+    border-radius: var(--sa-radius-full);
+    overflow: hidden;
+    margin-bottom: var(--sa-spacing-md);
+}
+
+.secure-aura-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--sa-primary), var(--sa-primary-light));
+    border-radius: var(--sa-radius-full);
+    transition: width 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.secure-aura-progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background-image: linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.2) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0.2) 75%,
+        transparent 75%,
+        transparent
+    );
+    background-size: 50px 50px;
+    animation: move 2s linear infinite;
+}
+
+@keyframes move {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 50px 50px;
+    }
+}
+
+.secure-aura-progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--sa-font-size-sm);
+    color: var(--sa-text-secondary);
+    margin-bottom: var(--sa-spacing-md);
+}
+
+/* ==========================================================================
+   Scan Details
+   ========================================================================== */
+
+.secure-aura-scan-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--sa-spacing-md);
+    margin-top: var(--sa-spacing-lg);
+}
+
+.secure-aura-scan-stat {
+    text-align: center;
+    padding: var(--sa-spacing-md);
+    background: var(--sa-bg-secondary);
+    border-radius: var(--sa-radius-md);
+}
+
+.secure-aura-stat-label {
+    display: block;
+    font-size: var(--sa-font-size-xs);
+    color: var(--sa-text-secondary);
+    margin-bottom: var(--sa-spacing-xs);
+}
+
+.secure-aura-scan-stat span:last-child {
+    font-size: var(--sa-font-size-lg);
+    font-weight: 600;
+    color: var(--sa-text-primary);
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .secure-aura-status-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .secure-aura-header-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .secure-aura-score-display {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .secure-aura-license-info {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .secure-aura-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .secure-aura-dashboard {
+        margin: var(--sa-spacing-md) 0;
+    }
+    
+    .secure-aura-header,
+    .secure-aura-card-body {
+        padding: var(--sa-spacing-md);
+    }
+    
+    .secure-aura-actions-grid {
+        grid-template-columns: 1fr;
+    }
+}

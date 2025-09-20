@@ -1,8 +1,6 @@
 <?php
 /**
- * AJAX Request Handler for SecureAura
- *
- * Handles all AJAX requests from the admin interface
+ * The AJAX functionality of the plugin.
  *
  * @link       https://secureaura.pro
  * @since      3.0.0
@@ -17,879 +15,957 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * AJAX Request Handler Class
+ * The AJAX functionality of the plugin.
  *
- * Manages all AJAX endpoints for the admin interface including:
- * - Emergency lockdown toggle
- * - IP management (block/unblock)
+ * Handles all AJAX requests from the admin interface including:
+ * - Emergency mode toggle
+ * - IP management
  * - Security scanning
- * - Real-time monitoring
- * - Settings management
+ * - Real-time data updates
+ * - System information
  *
- * @since      3.0.0
  * @package    SecureAura
  * @subpackage SecureAura/admin
- * @author     SecureAura Team
+ * @author     Bitekservices
  */
 class Secure_Aura_Ajax_Handler {
-
-    /**
-     * Main plugin instance.
-     *
-     * @since    3.0.0
-     * @access   private
-     * @var      object    $plugin    Main plugin instance.
-     */
-    private $plugin;
 
     /**
      * Plugin configuration.
      *
      * @since    3.0.0
      * @access   private
-     * @var      array    $config    Plugin configuration.
+     * @var      array    $config    Plugin configuration array.
      */
     private $config;
 
     /**
-     * Initialize the AJAX handler.
+     * Database manager instance.
      *
      * @since    3.0.0
-     * @param    object $plugin Main plugin instance.
+     * @access   private
+     * @var      object    $db_manager    Database manager instance.
      */
-    public function __construct($plugin) {
-        $this->plugin = $plugin;
-        $this->config = $plugin->get_config();
+    private $db_manager;
+
+    /**
+     * Initialize the class and set its properties.
+     *
+     * @since    3.0.0
+     * @param    array     $config     Plugin configuration.
+     */
+    public function __construct($config = []) {
+        $this->config = $config;
         
-        $this->init_ajax_hooks();
+        // Initialize database manager
+        if (class_exists('Secure_Aura_Database_Manager')) {
+            $this->db_manager = new Secure_Aura_Database_Manager();
+        }
     }
 
     /**
-     * Initialize AJAX hooks.
+     * Register AJAX hooks.
      *
      * @since    3.0.0
      */
-    private function init_ajax_hooks() {
+    public function init() {
         // Emergency Mode
-        add_action('wp_ajax_secure_aura_toggle_emergency', [$this, 'handle_toggle_emergency']);
+        add_action('wp_ajax_secure_aura_emergency_mode', [$this, 'handle_emergency_mode']);
         
         // IP Management
+        add_action('wp_ajax_secure_aura_get_blocked_ips', [$this, 'handle_get_blocked_ips']);
         add_action('wp_ajax_secure_aura_block_ip', [$this, 'handle_block_ip']);
         add_action('wp_ajax_secure_aura_unblock_ip', [$this, 'handle_unblock_ip']);
-        add_action('wp_ajax_secure_aura_get_blocked_ips', [$this, 'handle_get_blocked_ips']);
-        add_action('wp_ajax_secure_aura_get_ip_info', [$this, 'handle_get_ip_info']);
         
-        // Scanner Operations
-        add_action('wp_ajax_secure_aura_run_scan', [$this, 'handle_run_scan']);
+        // Security Scanning
+        add_action('wp_ajax_secure_aura_start_scan', [$this, 'handle_start_scan']);
+        add_action('wp_ajax_secure_aura_stop_scan', [$this, 'handle_stop_scan']);
+        add_action('wp_ajax_secure_aura_get_scan_progress', [$this, 'handle_get_scan_progress']);
         add_action('wp_ajax_secure_aura_get_scan_status', [$this, 'handle_get_scan_status']);
-        add_action('wp_ajax_secure_aura_cancel_scan', [$this, 'handle_cancel_scan']);
         
-        // Dashboard Data
-        add_action('wp_ajax_secure_aura_get_dashboard_data', [$this, 'handle_get_dashboard_data']);
-        add_action('wp_ajax_secure_aura_get_real_time_stats', [$this, 'handle_get_real_time_stats']);
+        // Dashboard & System Info
+        add_action('wp_ajax_secure_aura_get_system_info', [$this, 'handle_get_system_info']);
+        add_action('wp_ajax_secure_aura_get_realtime_data', [$this, 'handle_get_realtime_data']);
+        add_action('wp_ajax_secure_aura_refresh_dashboard', [$this, 'handle_refresh_dashboard']);
         
         // Threat Management
-        add_action('wp_ajax_secure_aura_quarantine_file', [$this, 'handle_quarantine_file']);
-        add_action('wp_ajax_secure_aura_restore_file', [$this, 'handle_restore_file']);
-        add_action('wp_ajax_secure_aura_delete_quarantined', [$this, 'handle_delete_quarantined']);
+        add_action('wp_ajax_secure_aura_quarantine_threat', [$this, 'handle_quarantine_threat']);
+        add_action('wp_ajax_secure_aura_delete_threat', [$this, 'handle_delete_threat']);
+        add_action('wp_ajax_secure_aura_whitelist_file', [$this, 'handle_whitelist_file']);
         
         // Settings
         add_action('wp_ajax_secure_aura_save_settings', [$this, 'handle_save_settings']);
         add_action('wp_ajax_secure_aura_reset_settings', [$this, 'handle_reset_settings']);
         
-        // System Info
-        add_action('wp_ajax_secure_aura_get_system_info', [$this, 'handle_get_system_info']);
-        add_action('wp_ajax_secure_aura_download_logs', [$this, 'handle_download_logs']);
-        
-        // Threat Intelligence
-        add_action('wp_ajax_secure_aura_update_threat_intel', [$this, 'handle_update_threat_intel']);
+        // Logs
+        add_action('wp_ajax_secure_aura_get_logs', [$this, 'handle_get_logs']);
+        add_action('wp_ajax_secure_aura_clear_logs', [$this, 'handle_clear_logs']);
     }
 
     /**
-     * Handle emergency mode toggle.
+     * Handle Emergency Mode Toggle
      *
      * @since    3.0.0
      */
-    public function handle_toggle_emergency() {
+    public function handle_emergency_mode() {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_emergency_nonce')) {
-            wp_send_json_error(['message' => __('Security check failed.', 'secure-aura')]);
-        }
-
-        // Check permissions
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions.', 'secure-aura')]);
-        }
-
-        $current_mode = get_option('secure_aura_emergency_mode', false);
-        $new_mode = !$current_mode;
-        
-        try {
-            // Toggle emergency mode
-            update_option('secure_aura_emergency_mode', $new_mode);
-            
-            if ($new_mode) {
-                $this->activate_emergency_mode();
-                $message = __('Emergency mode activated! Maximum security protection is now active.', 'secure-aura');
-                $status = 'activated';
-            } else {
-                $this->deactivate_emergency_mode();
-                $message = __('Emergency mode deactivated. Normal security level restored.', 'secure-aura');
-                $status = 'deactivated';
-            }
-            
-            // Log the action
-            $this->log_emergency_action($new_mode);
-            
-            wp_send_json_success([
-                'emergency_mode' => $new_mode,
-                'status' => $status,
-                'message' => $message,
-                'button_text' => $new_mode ? __('Disable Emergency', 'secure-aura') : __('Emergency Mode', 'secure-aura')
+        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security verification failed.', 'secure-aura')
             ]);
-            
+        }
+
+        // Check user permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('Insufficient permissions.', 'secure-aura')
+            ]);
+        }
+
+        $action = sanitize_text_field($_POST['emergency_action']);
+        $current_status = get_option('secure_aura_emergency_mode', false);
+
+        try {
+            if ($action === 'enable') {
+                // Enable emergency mode
+                $this->enable_emergency_mode();
+                
+                wp_send_json_success([
+                    'message' => __('Emergency mode activated successfully! Maximum security protection is now enabled.', 'secure-aura'),
+                    'status' => 'enabled',
+                    'timestamp' => current_time('mysql')
+                ]);
+                
+            } elseif ($action === 'disable') {
+                // Disable emergency mode
+                $this->disable_emergency_mode();
+                
+                wp_send_json_success([
+                    'message' => __('Emergency mode deactivated successfully.', 'secure-aura'),
+                    'status' => 'disabled',
+                    'timestamp' => current_time('mysql')
+                ]);
+                
+            } else {
+                wp_send_json_error([
+                    'message' => __('Invalid action specified.', 'secure-aura')
+                ]);
+            }
+
         } catch (Exception $e) {
-            wp_send_json_error(['message' => $e->getMessage()]);
+            wp_send_json_error([
+                'message' => __('Failed to toggle emergency mode: ', 'secure-aura') . $e->getMessage()
+            ]);
         }
     }
 
     /**
-     * Handle block IP request.
+     * Enable Emergency Mode
      *
      * @since    3.0.0
      */
-    public function handle_block_ip() {
-        // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_ip_nonce')) {
-            wp_send_json_error(['message' => __('Security check failed.', 'secure-aura')]);
+    private function enable_emergency_mode() {
+        // Store current settings before applying emergency settings
+        $current_settings = get_option('secure_aura_settings', []);
+        update_option('secure_aura_settings_backup_before_emergency', $current_settings);
+        
+        // Apply emergency settings
+        $emergency_settings = [
+            'quantum_firewall_enabled' => true,
+            'firewall_strictness' => 'maximum',
+            'real_time_scanning_enabled' => true,
+            'scan_frequency' => 'continuous',
+            'auto_quarantine_threats' => true,
+            'block_suspicious_uploads' => true,
+            'disable_file_editing' => true,
+            'force_strong_passwords' => true,
+            'limit_login_attempts' => true,
+            'max_login_attempts' => 3,
+            'block_admin_access_from_frontend' => true,
+            'disable_xmlrpc' => true,
+            'hide_wp_version' => true,
+            'block_directory_browsing' => true,
+            'emergency_contact_notifications' => true,
+            'log_all_activities' => true,
+        ];
+        
+        // Merge emergency settings with current settings
+        $updated_settings = array_merge($current_settings, $emergency_settings);
+        update_option('secure_aura_settings', $updated_settings);
+        
+        // Set emergency mode flag
+        update_option('secure_aura_emergency_mode', true);
+        update_option('secure_aura_emergency_mode_activated_at', current_time('mysql'));
+        update_option('secure_aura_emergency_mode_activated_by', get_current_user_id());
+        
+        // Apply immediate security measures
+        $this->apply_immediate_security_measures();
+        
+        // Log emergency mode activation
+        if ($this->db_manager) {
+            $this->db_manager->log_event(
+                'emergency_mode_activated',
+                [
+                    'user_id' => get_current_user_id(),
+                    'ip_address' => $this->get_client_ip(),
+                    'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
+                    'settings_applied' => $emergency_settings,
+                ],
+                'high'
+            );
         }
-
-        // Check permissions
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions.', 'secure-aura')]);
-        }
-
-        $ip_address = sanitize_text_field($_POST['ip_address']);
-        $reason = sanitize_text_field($_POST['reason'] ?? 'Manual block');
-        $duration = intval($_POST['duration'] ?? 0); // 0 = permanent
-
-        // Validate IP
-        if (!filter_var($ip_address, FILTER_VALIDATE_IP)) {
-            wp_send_json_error(['message' => __('Invalid IP address.', 'secure-aura')]);
-        }
-
-        // Don't block current user's IP
-        if ($ip_address === $this->get_client_ip()) {
-            wp_send_json_error(['message' => __('Cannot block your own IP address.', 'secure-aura')]);
-        }
-
-        try {
-            $result = $this->block_ip_address($ip_address, $reason, $duration);
-            
-            if ($result['success']) {
-                wp_send_json_success([
-                    'message' => sprintf(__('IP %s has been blocked successfully.', 'secure-aura'), $ip_address),
-                    'ip_data' => $result['ip_data']
-                ]);
-            } else {
-                wp_send_json_error(['message' => $result['message']]);
-            }
-            
-        } catch (Exception $e) {
-            wp_send_json_error(['message' => $e->getMessage()]);
-        }
+        
+        // Send notification to admin
+        $this->send_emergency_mode_notification('activated');
+        
+        // Clear all caches
+        $this->clear_all_caches();
     }
 
     /**
-     * Handle unblock IP request.
+     * Disable Emergency Mode
      *
      * @since    3.0.0
      */
-    public function handle_unblock_ip() {
-        // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_ip_nonce')) {
-            wp_send_json_error(['message' => __('Security check failed.', 'secure-aura')]);
+    private function disable_emergency_mode() {
+        // Restore previous settings
+        $backup_settings = get_option('secure_aura_settings_backup_before_emergency', []);
+        
+        if (!empty($backup_settings)) {
+            update_option('secure_aura_settings', $backup_settings);
+            delete_option('secure_aura_settings_backup_before_emergency');
         }
-
-        // Check permissions
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions.', 'secure-aura')]);
+        
+        // Disable emergency mode flag
+        update_option('secure_aura_emergency_mode', false);
+        update_option('secure_aura_emergency_mode_deactivated_at', current_time('mysql'));
+        update_option('secure_aura_emergency_mode_deactivated_by', get_current_user_id());
+        
+        // Log emergency mode deactivation
+        if ($this->db_manager) {
+            $this->db_manager->log_event(
+                'emergency_mode_deactivated',
+                [
+                    'user_id' => get_current_user_id(),
+                    'ip_address' => $this->get_client_ip(),
+                    'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
+                    'duration' => $this->calculate_emergency_mode_duration(),
+                ],
+                'medium'
+            );
         }
-
-        $ip_address = sanitize_text_field($_POST['ip_address']);
-
-        // Validate IP
-        if (!filter_var($ip_address, FILTER_VALIDATE_IP)) {
-            wp_send_json_error(['message' => __('Invalid IP address.', 'secure-aura')]);
-        }
-
-        try {
-            $result = $this->unblock_ip_address($ip_address);
-            
-            if ($result['success']) {
-                wp_send_json_success([
-                    'message' => sprintf(__('IP %s has been unblocked successfully.', 'secure-aura'), $ip_address)
-                ]);
-            } else {
-                wp_send_json_error(['message' => $result['message']]);
-            }
-            
-        } catch (Exception $e) {
-            wp_send_json_error(['message' => $e->getMessage()]);
-        }
+        
+        // Send notification
+        $this->send_emergency_mode_notification('deactivated');
+        
+        // Clear caches
+        $this->clear_all_caches();
     }
 
     /**
-     * Handle get blocked IPs request.
+     * Apply Immediate Security Measures
+     *
+     * @since    3.0.0
+     */
+    private function apply_immediate_security_measures() {
+        // Flush rewrite rules
+        flush_rewrite_rules();
+        
+        // Clear any existing malicious sessions
+        $this->clear_suspicious_sessions();
+        
+        // Update .htaccess with security rules
+        $this->update_htaccess_security_rules();
+        
+        // Block current suspicious IPs
+        $this->block_suspicious_ips();
+    }
+
+    /**
+     * Handle Get Blocked IPs
      *
      * @since    3.0.0
      */
     public function handle_get_blocked_ips() {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_ajax_nonce')) {
-            wp_send_json_error(['message' => __('Security check failed.', 'secure-aura')]);
+        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security verification failed.', 'secure-aura')
+            ]);
         }
 
-        // Check permissions
+        // Check user permissions
         if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions.', 'secure-aura')]);
+            wp_send_json_error([
+                'message' => __('Insufficient permissions.', 'secure-aura')
+            ]);
         }
-
-        $page = intval($_POST['page'] ?? 1);
-        $per_page = intval($_POST['per_page'] ?? 20);
-        $search = sanitize_text_field($_POST['search'] ?? '');
 
         try {
-            $blocked_ips = $this->get_blocked_ips_list($page, $per_page, $search);
-            wp_send_json_success($blocked_ips);
+            global $wpdb;
+            $table_name = $wpdb->prefix . SECURE_AURA_TABLE_BLOCKED_IPS;
+            
+            $blocked_ips = $wpdb->get_results("
+                SELECT ip_address, reason, blocked_at, expires_at, is_permanent
+                FROM {$table_name} 
+                WHERE is_active = 1 
+                ORDER BY blocked_at DESC 
+                LIMIT 100
+            ");
+            
+            // Format the data
+            $formatted_ips = [];
+            foreach ($blocked_ips as $ip) {
+                $formatted_ips[] = [
+                    'ip_address' => $ip->ip_address,
+                    'reason' => $ip->reason ?: __('No reason provided', 'secure-aura'),
+                    'blocked_at' => $this->format_date($ip->blocked_at),
+                    'expires_at' => $ip->expires_at ? $this->format_date($ip->expires_at) : __('Never', 'secure-aura'),
+                    'is_permanent' => (bool) $ip->is_permanent,
+                ];
+            }
+            
+            wp_send_json_success([
+                'ips' => $formatted_ips,
+                'total_count' => count($formatted_ips)
+            ]);
             
         } catch (Exception $e) {
-            wp_send_json_error(['message' => $e->getMessage()]);
+            wp_send_json_error([
+                'message' => __('Failed to retrieve blocked IPs: ', 'secure-aura') . $e->getMessage()
+            ]);
         }
     }
 
     /**
-     * Handle get IP info request.
+     * Handle Block IP
      *
      * @since    3.0.0
      */
-    public function handle_get_ip_info() {
+    public function handle_block_ip() {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_ajax_nonce')) {
-            wp_send_json_error(['message' => __('Security check failed.', 'secure-aura')]);
+        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security verification failed.', 'secure-aura')
+            ]);
+        }
+
+        // Check user permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('Insufficient permissions.', 'secure-aura')
+            ]);
+        }
+
+        $ip_address = sanitize_text_field($_POST['ip_address']);
+        $reason = sanitize_text_field($_POST['reason']) ?: __('Manually blocked by admin', 'secure-aura');
+
+        // Validate IP address
+        if (!filter_var($ip_address, FILTER_VALIDATE_IP)) {
+            wp_send_json_error([
+                'message' => __('Invalid IP address format.', 'secure-aura')
+            ]);
+        }
+
+        // Check if IP is already blocked
+        if ($this->is_ip_blocked($ip_address)) {
+            wp_send_json_error([
+                'message' => __('This IP address is already blocked.', 'secure-aura')
+            ]);
+        }
+
+        // Don't allow blocking current user's IP
+        if ($ip_address === $this->get_client_ip()) {
+            wp_send_json_error([
+                'message' => __('You cannot block your own IP address.', 'secure-aura')
+            ]);
+        }
+
+        try {
+            global $wpdb;
+            $table_name = $wpdb->prefix . SECURE_AURA_TABLE_BLOCKED_IPS;
+            
+            $result = $wpdb->insert(
+                $table_name,
+                [
+                    'ip_address' => $ip_address,
+                    'reason' => $reason,
+                    'blocked_by_user_id' => get_current_user_id(),
+                    'is_active' => 1,
+                    'is_permanent' => 1,
+                    'blocked_at' => current_time('mysql'),
+                    'threat_type' => 'manual_block',
+                ],
+                ['%s', '%s', '%d', '%d', '%d', '%s', '%s']
+            );
+            
+            if ($result === false) {
+                throw new Exception(__('Database error occurred while blocking IP.', 'secure-aura'));
+            }
+            
+            // Apply block immediately via .htaccess
+            $this->apply_ip_block_to_htaccess($ip_address);
+            
+            // Log the action
+            if ($this->db_manager) {
+                $this->db_manager->log_event(
+                    'ip_blocked_manually',
+                    [
+                        'blocked_ip' => $ip_address,
+                        'reason' => $reason,
+                        'blocked_by_user_id' => get_current_user_id(),
+                        'admin_ip' => $this->get_client_ip(),
+                    ],
+                    'medium'
+                );
+            }
+            
+            wp_send_json_success([
+                'message' => sprintf(__('IP address %s has been blocked successfully.', 'secure-aura'), $ip_address),
+                'ip_address' => $ip_address,
+                'blocked_at' => current_time('mysql')
+            ]);
+            
+        } catch (Exception $e) {
+            wp_send_json_error([
+                'message' => __('Failed to block IP address: ', 'secure-aura') . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Handle Unblock IP
+     *
+     * @since    3.0.0
+     */
+    public function handle_unblock_ip() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security verification failed.', 'secure-aura')
+            ]);
+        }
+
+        // Check user permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('Insufficient permissions.', 'secure-aura')
+            ]);
         }
 
         $ip_address = sanitize_text_field($_POST['ip_address']);
 
-        // Validate IP
+        // Validate IP address
         if (!filter_var($ip_address, FILTER_VALIDATE_IP)) {
-            wp_send_json_error(['message' => __('Invalid IP address.', 'secure-aura')]);
+            wp_send_json_error([
+                'message' => __('Invalid IP address format.', 'secure-aura')
+            ]);
         }
 
         try {
-            $ip_info = $this->get_ip_information($ip_address);
-            wp_send_json_success($ip_info);
+            global $wpdb;
+            $table_name = $wpdb->prefix . SECURE_AURA_TABLE_BLOCKED_IPS;
+            
+            $result = $wpdb->update(
+                $table_name,
+                [
+                    'is_active' => 0,
+                    'unblocked_at' => current_time('mysql'),
+                    'unblocked_by_user_id' => get_current_user_id(),
+                ],
+                ['ip_address' => $ip_address, 'is_active' => 1],
+                ['%d', '%s', '%d'],
+                ['%s', '%d']
+            );
+            
+            if ($result === false) {
+                throw new Exception(__('Database error occurred while unblocking IP.', 'secure-aura'));
+            }
+            
+            if ($result === 0) {
+                wp_send_json_error([
+                    'message' => __('IP address not found in blocked list.', 'secure-aura')
+                ]);
+            }
+            
+            // Remove block from .htaccess
+            $this->remove_ip_block_from_htaccess($ip_address);
+            
+            // Log the action
+            if ($this->db_manager) {
+                $this->db_manager->log_event(
+                    'ip_unblocked_manually',
+                    [
+                        'unblocked_ip' => $ip_address,
+                        'unblocked_by_user_id' => get_current_user_id(),
+                        'admin_ip' => $this->get_client_ip(),
+                    ],
+                    'low'
+                );
+            }
+            
+            wp_send_json_success([
+                'message' => sprintf(__('IP address %s has been unblocked successfully.', 'secure-aura'), $ip_address),
+                'ip_address' => $ip_address,
+                'unblocked_at' => current_time('mysql')
+            ]);
             
         } catch (Exception $e) {
-            wp_send_json_error(['message' => $e->getMessage()]);
+            wp_send_json_error([
+                'message' => __('Failed to unblock IP address: ', 'secure-aura') . $e->getMessage()
+            ]);
         }
     }
 
     /**
-     * Handle scan request.
+     * Handle Start Security Scan
      *
      * @since    3.0.0
      */
-    public function handle_run_scan() {
+    public function handle_start_scan() {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_scan_nonce')) {
-            wp_send_json_error(['message' => __('Security check failed.', 'secure-aura')]);
+        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security verification failed.', 'secure-aura')
+            ]);
         }
 
-        // Check permissions
+        // Check user permissions
         if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Insufficient permissions.', 'secure-aura')]);
+            wp_send_json_error([
+                'message' => __('Insufficient permissions.', 'secure-aura')
+            ]);
         }
 
         // Check if scan is already running
         if (get_transient('secure_aura_scan_in_progress')) {
-            wp_send_json_error(['message' => __('A scan is already in progress.', 'secure-aura')]);
+            wp_send_json_error([
+                'message' => __('A security scan is already in progress.', 'secure-aura')
+            ]);
         }
 
-        $scan_type = sanitize_text_field($_POST['scan_type'] ?? 'quick');
-        
+        $scan_type = sanitize_text_field($_POST['scan_type']) ?: 'full';
+
         try {
-            // Initialize scanner
+            // Initialize scanner if available
             if (class_exists('Secure_Aura_Malware_Scanner')) {
                 $scanner = new Secure_Aura_Malware_Scanner($this->config);
                 
-                if ($scan_type === 'quick') {
-                    $result = $scanner->run_quick_scan();
-                } else {
-                    $result = $scanner->run_full_scan();
-                }
+                // Start scan in background
+                wp_schedule_single_event(time(), 'secure_aura_run_background_scan', [$scan_type]);
+                
+                // Set scan in progress flag
+                set_transient('secure_aura_scan_in_progress', [
+                    'scan_type' => $scan_type,
+                    'started_at' => current_time('mysql'),
+                    'started_by' => get_current_user_id(),
+                ], 3600); // 1 hour timeout
+                
+                // Initialize progress
+                set_transient('secure_aura_scan_progress', [
+                    'percentage' => 0,
+                    'status' => __('Initializing scan...', 'secure-aura'),
+                    'files_scanned' => 0,
+                    'threats_found' => 0,
+                ], 3600);
                 
                 wp_send_json_success([
-                    'scan_id' => $result['scan_id'],
                     'message' => __('Security scan started successfully.', 'secure-aura'),
-                    'scan_type' => $scan_type
+                    'scan_type' => $scan_type,
+                    'started_at' => current_time('mysql')
                 ]);
+                
             } else {
-                wp_send_json_error(['message' => __('Scanner module not available.', 'secure-aura')]);
+                wp_send_json_error([
+                    'message' => __('Scanner module is not available.', 'secure-aura')
+                ]);
             }
             
         } catch (Exception $e) {
-            wp_send_json_error(['message' => $e->getMessage()]);
+            wp_send_json_error([
+                'message' => __('Failed to start security scan: ', 'secure-aura') . $e->getMessage()
+            ]);
         }
     }
 
     /**
-     * Handle get scan status request.
+     * Handle Get Scan Progress
+     *
+     * @since    3.0.0
+     */
+    public function handle_get_scan_progress() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security verification failed.', 'secure-aura')
+            ]);
+        }
+
+        $progress = get_transient('secure_aura_scan_progress');
+        $in_progress = get_transient('secure_aura_scan_in_progress');
+        
+        if ($progress && $in_progress) {
+            wp_send_json_success([
+                'progress' => $progress,
+                'scan_info' => $in_progress
+            ]);
+        } else {
+            // Check for completed scan results
+            $last_scan = get_option('secure_aura_last_scan_results');
+            if ($last_scan) {
+                wp_send_json_success([
+                    'progress' => [
+                        'percentage' => 100,
+                        'status' => 'completed',
+                        'files_scanned' => $last_scan['files_scanned'] ?? 0,
+                        'threats_found' => count($last_scan['threats_found'] ?? []),
+                    ]
+                ]);
+            } else {
+                wp_send_json_error([
+                    'message' => __('No scan progress found.', 'secure-aura')
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Handle Get Scan Status
      *
      * @since    3.0.0
      */
     public function handle_get_scan_status() {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_ajax_nonce')) {
-            wp_send_json_error(['message' => __('Security check failed.', 'secure-aura')]);
+        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security verification failed.', 'secure-aura')
+            ]);
         }
 
-        try {
-            $scan_progress = get_transient('secure_aura_scan_progress');
-            $scan_in_progress = get_transient('secure_aura_scan_in_progress');
-            
-            if ($scan_progress && $scan_in_progress) {
-                wp_send_json_success([
-                    'status' => 'running',
-                    'progress' => $scan_progress,
-                    'in_progress' => true
-                ]);
-            } else {
-                $last_scan = get_option('secure_aura_last_scan_results', []);
-                wp_send_json_success([
-                    'status' => 'completed',
-                    'last_scan' => $last_scan,
-                    'in_progress' => false
-                ]);
-            }
-            
-        } catch (Exception $e) {
-            wp_send_json_error(['message' => $e->getMessage()]);
-        }
+        $status = $this->get_current_scan_status();
+        
+        wp_send_json_success([
+            'status' => $status['status'],
+            'data' => $status
+        ]);
     }
 
     /**
-     * Handle get dashboard data request.
+     * Handle Stop Security Scan
      *
      * @since    3.0.0
      */
-    public function handle_get_dashboard_data() {
+    public function handle_stop_scan() {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_ajax_nonce')) {
-            wp_send_json_error(['message' => __('Security check failed.', 'secure-aura')]);
+        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security verification failed.', 'secure-aura')
+            ]);
+        }
+
+        // Check user permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('Insufficient permissions.', 'secure-aura')
+            ]);
         }
 
         try {
-            $dashboard_data = [
-                'security_score' => $this->calculate_security_score(),
-                'threats_blocked_today' => $this->get_threats_blocked_today(),
-                'recent_activities' => $this->get_recent_activities(10),
-                'system_health' => $this->get_system_health_status(),
-                'emergency_mode' => get_option('secure_aura_emergency_mode', false),
-                'last_scan' => get_option('secure_aura_last_scan_time', ''),
-                'scan_status' => $this->get_current_scan_status()
-            ];
+            // Clear scan progress
+            delete_transient('secure_aura_scan_in_progress');
+            delete_transient('secure_aura_scan_progress');
             
-            wp_send_json_success($dashboard_data);
+            // Cancel scheduled scan
+            wp_clear_scheduled_hook('secure_aura_run_background_scan');
+            
+            // Log scan cancellation
+            if ($this->db_manager) {
+                $this->db_manager->log_event(
+                    'scan_cancelled',
+                    [
+                        'cancelled_by_user_id' => get_current_user_id(),
+                        'cancelled_at' => current_time('mysql'),
+                    ],
+                    'low'
+                );
+            }
+            
+            wp_send_json_success([
+                'message' => __('Security scan stopped successfully.', 'secure-aura')
+            ]);
             
         } catch (Exception $e) {
-            wp_send_json_error(['message' => $e->getMessage()]);
+            wp_send_json_error([
+                'message' => __('Failed to stop security scan: ', 'secure-aura') . $e->getMessage()
+            ]);
         }
     }
 
     /**
-     * Handle get system info request.
+     * Handle Get System Information
      *
      * @since    3.0.0
      */
     public function handle_get_system_info() {
         // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_ajax_nonce')) {
-            wp_send_json_error(['message' => __('Security check failed.', 'secure-aura')]);
+        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security verification failed.', 'secure-aura')
+            ]);
+        }
+
+        // Check user permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('Insufficient permissions.', 'secure-aura')
+            ]);
         }
 
         try {
             $system_info = $this->collect_system_information();
-            wp_send_json_success($system_info);
             
-        } catch (Exception $e) {
-            wp_send_json_error(['message' => $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Activate emergency mode.
-     *
-     * @since    3.0.0
-     */
-    private function activate_emergency_mode() {
-        // Update security settings to maximum
-        $emergency_settings = [
-            'security_level' => SECURE_AURA_LEVEL_FORTRESS,
-            'firewall_mode' => 'blocking',
-            'auto_block_malicious_ips' => true,
-            'brute_force_protection' => true,
-            'rate_limiting_enabled' => true,
-            'geo_blocking_enabled' => true,
-            'tor_blocking_enabled' => true,
-            'vpn_blocking_enabled' => true
-        ];
-        
-        foreach ($emergency_settings as $key => $value) {
-            update_option('secure_aura_' . $key, $value);
-        }
-        
-        // Clear all caches
-        wp_cache_flush();
-        
-        // Update .htaccess if possible
-        $this->update_htaccess_emergency_rules();
-    }
-
-    /**
-     * Deactivate emergency mode.
-     *
-     * @since    3.0.0
-     */
-    private function deactivate_emergency_mode() {
-        // Restore normal settings
-        $normal_settings = [
-            'security_level' => SECURE_AURA_LEVEL_ENHANCED,
-            'firewall_mode' => 'learning',
-            'geo_blocking_enabled' => false,
-            'tor_blocking_enabled' => false,
-            'vpn_blocking_enabled' => false
-        ];
-        
-        foreach ($normal_settings as $key => $value) {
-            update_option('secure_aura_' . $key, $value);
-        }
-        
-        // Remove emergency .htaccess rules
-        $this->remove_htaccess_emergency_rules();
-    }
-
-    /**
-     * Block IP address.
-     *
-     * @since    3.0.0
-     * @param    string $ip_address IP to block.
-     * @param    string $reason     Block reason.
-     * @param    int    $duration   Block duration in hours (0 = permanent).
-     * @return   array  Operation result.
-     */
-    private function block_ip_address($ip_address, $reason, $duration = 0) {
-        global $wpdb;
-        
-        $table_name = $wpdb->prefix . SECURE_AURA_TABLE_BLOCKED_IPS;
-        
-        // Check if IP is already blocked
-        $existing = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$table_name} WHERE ip_address = %s",
-            $ip_address
-        ));
-        
-        if ($existing) {
-            return [
-                'success' => false,
-                'message' => __('IP address is already blocked.', 'secure-aura')
-            ];
-        }
-        
-        // Calculate expiration
-        $expires_at = null;
-        if ($duration > 0) {
-            $expires_at = date('Y-m-d H:i:s', time() + ($duration * 3600));
-        }
-        
-        // Get IP info
-        $ip_info = $this->get_ip_geolocation($ip_address);
-        
-        // Insert blocked IP
-        $result = $wpdb->insert($table_name, [
-            'ip_address' => $ip_address,
-            'block_reason' => $reason,
-            'threat_type' => 'manual_block',
-            'confidence_score' => 1.0,
-            'blocked_at' => current_time('mysql'),
-            'expires_at' => $expires_at,
-            'is_permanent' => $duration === 0,
-            'is_manual' => true,
-            'blocked_by_user_id' => get_current_user_id(),
-            'geo_country' => $ip_info['country'] ?? '',
-            'geo_region' => $ip_info['region'] ?? '',
-            'asn' => $ip_info['asn'] ?? '',
-            'organization' => $ip_info['organization'] ?? ''
-        ]);
-        
-        if ($result) {
-            // Log the action
-            $this->log_ip_block_action($ip_address, $reason);
-            
-            // Update .htaccess
-            $this->update_htaccess_blocked_ips();
-            
-            return [
-                'success' => true,
-                'ip_data' => [
-                    'ip_address' => $ip_address,
-                    'blocked_at' => current_time('mysql'),
-                    'expires_at' => $expires_at,
-                    'reason' => $reason,
-                    'country' => $ip_info['country'] ?? 'Unknown'
-                ]
-            ];
-        }
-        
-        return [
-            'success' => false,
-            'message' => __('Failed to block IP address.', 'secure-aura')
-        ];
-    }
-
-    /**
-     * Unblock IP address.
-     *
-     * @since    3.0.0
-     * @param    string $ip_address IP to unblock.
-     * @return   array  Operation result.
-     */
-    private function unblock_ip_address($ip_address) {
-        global $wpdb;
-        
-        $table_name = $wpdb->prefix . SECURE_AURA_TABLE_BLOCKED_IPS;
-        
-        $result = $wpdb->delete($table_name, [
-            'ip_address' => $ip_address
-        ]);
-        
-        if ($result) {
-            // Log the action
-            $this->log_ip_unblock_action($ip_address);
-            
-            // Update .htaccess
-            $this->update_htaccess_blocked_ips();
-            
-            return ['success' => true];
-        }
-        
-        return [
-            'success' => false,
-            'message' => __('Failed to unblock IP address or IP not found.', 'secure-aura')
-        ];
-    }
-
-    /**
-     * Get blocked IPs list.
-     *
-     * @since    3.0.0
-     * @param    int    $page     Page number.
-     * @param    int    $per_page Items per page.
-     * @param    string $search   Search term.
-     * @return   array  Blocked IPs data.
-     */
-    private function get_blocked_ips_list($page = 1, $per_page = 20, $search = '') {
-        global $wpdb;
-        
-        $table_name = $wpdb->prefix . SECURE_AURA_TABLE_BLOCKED_IPS;
-        $offset = ($page - 1) * $per_page;
-        
-        $where_clause = "WHERE 1=1";
-        $search_params = [];
-        
-        if (!empty($search)) {
-            $where_clause .= " AND (ip_address LIKE %s OR block_reason LIKE %s OR geo_country LIKE %s)";
-            $search_term = '%' . $search . '%';
-            $search_params = [$search_term, $search_term, $search_term];
-        }
-        
-        // Get total count
-        $total_query = "SELECT COUNT(*) FROM {$table_name} {$where_clause}";
-        $total = $wpdb->get_var($wpdb->prepare($total_query, $search_params));
-        
-        // Get blocked IPs
-        $query = "SELECT * FROM {$table_name} {$where_clause} ORDER BY blocked_at DESC LIMIT %d OFFSET %d";
-        $params = array_merge($search_params, [$per_page, $offset]);
-        $blocked_ips = $wpdb->get_results($wpdb->prepare($query, $params));
-        
-        // Format data
-        $formatted_ips = array_map(function($ip) {
-            return [
-                'ip_address' => $ip->ip_address,
-                'block_reason' => $ip->block_reason,
-                'blocked_at' => $ip->blocked_at,
-                'expires_at' => $ip->expires_at,
-                'is_permanent' => (bool)$ip->is_permanent,
-                'geo_country' => $ip->geo_country,
-                'geo_region' => $ip->geo_region,
-                'organization' => $ip->organization,
-                'attempt_count' => $ip->attempt_count ?? 1,
-                'time_ago' => human_time_diff(strtotime($ip->blocked_at), current_time('timestamp'))
-            ];
-        }, $blocked_ips);
-        
-        return [
-            'ips' => $formatted_ips,
-            'total' => intval($total),
-            'page' => $page,
-            'per_page' => $per_page,
-            'total_pages' => ceil($total / $per_page)
-        ];
-    }
-
-    /**
-     * Get IP geolocation information.
-     *
-     * @since    3.0.0
-     * @param    string $ip_address IP address.
-     * @return   array  IP information.
-     */
-    private function get_ip_geolocation($ip_address) {
-        // Try to get from cache first
-        $cache_key = 'secure_aura_ip_info_' . md5($ip_address);
-        $cached_info = get_transient($cache_key);
-        
-        if ($cached_info !== false) {
-            return $cached_info;
-        }
-        
-        $ip_info = [
-            'country' => 'Unknown',
-            'region' => 'Unknown',
-            'city' => 'Unknown',
-            'asn' => '',
-            'organization' => '',
-            'is_tor' => false,
-            'is_vpn' => false,
-            'is_proxy' => false
-        ];
-        
-        // Try multiple IP info services
-        $services = [
-            'http://ip-api.com/json/' . $ip_address,
-            'https://ipapi.co/' . $ip_address . '/json/',
-            'https://api.ipgeolocation.io/ipgeo?apiKey=free&ip=' . $ip_address
-        ];
-        
-        foreach ($services as $service_url) {
-            $response = wp_remote_get($service_url, [
-                'timeout' => 10,
-                'user-agent' => 'SecureAura/' . SECURE_AURA_VERSION
+            wp_send_json_success([
+                'system_info' => $system_info
             ]);
             
-            if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
-                $data = json_decode(wp_remote_retrieve_body($response), true);
-                
-                if ($data) {
-                    // Parse different API formats
-                    $ip_info = $this->parse_ip_info_response($data, $service_url);
-                    break;
-                }
-            }
+        } catch (Exception $e) {
+            wp_send_json_error([
+                'message' => __('Failed to collect system information: ', 'secure-aura') . $e->getMessage()
+            ]);
         }
-        
-        // Cache for 1 hour
-        set_transient($cache_key, $ip_info, HOUR_IN_SECONDS);
-        
-        return $ip_info;
     }
 
     /**
-     * Calculate security score.
+     * Handle Get Real-time Data
      *
      * @since    3.0.0
-     * @return   array Security score data.
      */
-    private function calculate_security_score() {
-        $score = 0;
-        $max_score = 100;
-        
-        // Plugin active (20 points)
-        $score += 20;
-        
-        // Firewall enabled (25 points)
-        if (get_option('secure_aura_quantum_firewall_enabled', true)) {
-            $score += 25;
+    public function handle_get_realtime_data() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security verification failed.', 'secure-aura')
+            ]);
         }
-        
-        // Recent scan (20 points)
-        $last_scan = get_option('secure_aura_last_scan_time', '');
-        if ($last_scan && strtotime($last_scan) > (time() - 7 * 24 * 60 * 60)) {
-            $score += 20;
-        }
-        
-        // Real-time protection (15 points)
-        if (get_option('secure_aura_real_time_scanning_enabled', true)) {
-            $score += 15;
-        }
-        
-        // File integrity monitoring (10 points)
-        if (get_option('secure_aura_file_integrity_monitoring_enabled', true)) {
-            $score += 10;
-        }
-        
-        // Emergency mode (10 points)
-        if (get_option('secure_aura_emergency_mode', false)) {
-            $score += 10;
-        }
-        
-        // Determine status
-        $status = 'good';
-        if ($score >= 90) {
-            $status = 'excellent';
-        } elseif ($score >= 70) {
-            $status = 'good';
-        } elseif ($score >= 50) {
-            $status = 'warning';
-        } else {
-            $status = 'critical';
-        }
-        
-        return [
-            'score' => min($score, $max_score),
-            'status' => $status,
-            'max_score' => $max_score
-        ];
-    }
 
-    /**
-     * Get threats blocked today.
-     *
-     * @since    3.0.0
-     * @return   int Number of threats blocked today.
-     */
-    private function get_threats_blocked_today() {
-        global $wpdb;
-        
-        $table_name = $wpdb->prefix . SECURE_AURA_TABLE_LOGS;
-        
-        $count = $wpdb->get_var($wpdb->prepare("
-            SELECT COUNT(*) FROM {$table_name} 
-            WHERE response_action IN ('block', 'quarantine', 'blocked') 
-            AND DATE(created_at) = %s
-        ", current_time('Y-m-d')));
-        
-        return intval($count);
-    }
-
-    /**
-     * Get recent security activities.
-     *
-     * @since    3.0.0
-     * @param    int $limit Number of activities to retrieve.
-     * @return   array Recent activities.
-     */
-    private function get_recent_activities($limit = 10) {
-        global $wpdb;
-        
-        $table_name = $wpdb->prefix . SECURE_AURA_TABLE_LOGS;
-        
-        $activities = $wpdb->get_results($wpdb->prepare("
-            SELECT * FROM {$table_name} 
-            ORDER BY created_at DESC 
-            LIMIT %d
-        ", $limit));
-        
-        return array_map(function($activity) {
-            return [
-                'id' => $activity->id,
-                'event_type' => $activity->event_type,
-                'severity' => $activity->severity,
-                'source_ip' => $activity->source_ip,
-                'message' => $this->format_activity_message($activity),
-                'time_ago' => human_time_diff(strtotime($activity->created_at), current_time('timestamp')),
-                'timestamp' => $activity->created_at
+        try {
+            $data = [
+                'threats_blocked' => $this->get_total_threats_blocked(),
+                'last_scan' => get_option('secure_aura_last_scan_time', __('Never', 'secure-aura')),
+                'security_score' => $this->calculate_security_score(),
+                'recent_activities' => $this->get_recent_activities(5),
+                'active_threats' => $this->get_active_threats_count(),
+                'emergency_mode' => get_option('secure_aura_emergency_mode', false),
             ];
-        }, $activities);
+            
+            wp_send_json_success($data);
+            
+        } catch (Exception $e) {
+            wp_send_json_error([
+                'message' => __('Failed to get real-time data: ', 'secure-aura') . $e->getMessage()
+            ]);
+        }
     }
 
     /**
-     * Get system health status.
+     * Handle Refresh Dashboard
      *
      * @since    3.0.0
-     * @return   array System health information.
      */
-    private function get_system_health_status() {
-        $health = [
-            'status' => 'healthy',
-            'issues' => [],
-            'metrics' => []
-        ];
-        
-        // Check memory usage
-        $memory_limit = wp_convert_hr_to_bytes(ini_get('memory_limit'));
-        $memory_usage = memory_get_usage(true);
-        $memory_percent = ($memory_usage / $memory_limit) * 100;
-        
-        $health['metrics']['memory'] = [
-            'usage' => $memory_usage,
-            'limit' => $memory_limit,
-            'percentage' => round($memory_percent, 2)
-        ];
-        
-        if ($memory_percent > 80) {
-            $health['status'] = 'warning';
-            $health['issues'][] = __('High memory usage detected', 'secure-aura');
+    public function handle_refresh_dashboard() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security verification failed.', 'secure-aura')
+            ]);
         }
-        
-        // Check disk space
-        $disk_free = disk_free_space(ABSPATH);
-        $disk_total = disk_total_space(ABSPATH);
-        $disk_percent = (($disk_total - $disk_free) / $disk_total) * 100;
-        
-        $health['metrics']['disk'] = [
-            'free' => $disk_free,
-            'total' => $disk_total,
-            'percentage' => round($disk_percent, 2)
-        ];
-        
-        if ($disk_percent > 90) {
-            $health['status'] = 'critical';
-            $health['issues'][] = __('Low disk space', 'secure-aura');
-        } elseif ($disk_percent > 80) {
-            $health['status'] = 'warning';
-            $health['issues'][] = __('Disk space running low', 'secure-aura');
+
+        try {
+            // Clear dashboard cache
+            delete_transient('secure_aura_dashboard_cache');
+            delete_transient('secure_aura_dashboard_stats');
+            
+            // Refresh security score
+            delete_transient('secure_aura_security_score');
+            
+            wp_send_json_success([
+                'message' => __('Dashboard refreshed successfully.', 'secure-aura'),
+                'refreshed_at' => current_time('mysql')
+            ]);
+            
+        } catch (Exception $e) {
+            wp_send_json_error([
+                'message' => __('Failed to refresh dashboard: ', 'secure-aura') . $e->getMessage()
+            ]);
         }
-        
-        // Check database connectivity
-        if (!$this->test_database_connection()) {
-            $health['status'] = 'critical';
-            $health['issues'][] = __('Database connection issues', 'secure-aura');
-        }
-        
-        return $health;
     }
+
+    /**
+     * Handle Quarantine Threat
+     *
+     * @since    3.0.0
+     */
+    public function handle_quarantine_threat() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security verification failed.', 'secure-aura')
+            ]);
+        }
+
+        // Check user permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('Insufficient permissions.', 'secure-aura')
+            ]);
+        }
+
+        $threat_id = intval($_POST['threat_id']);
+        
+        try {
+            // Get threat details
+            global $wpdb;
+            $threats_table = $wpdb->prefix . SECURE_AURA_TABLE_THREATS;
+            
+            $threat = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$threats_table} WHERE id = %d",
+                $threat_id
+            ));
+            
+            if (!$threat) {
+                wp_send_json_error([
+                    'message' => __('Threat not found.', 'secure-aura')
+                ]);
+            }
+            
+            // Move file to quarantine
+            $quarantine_result = $this->quarantine_file($threat->file_path, $threat_id);
+            
+            if ($quarantine_result) {
+                // Update threat status
+                $wpdb->update(
+                    $threats_table,
+                    [
+                        'status' => 'quarantined',
+                        'quarantined_at' => current_time('mysql'),
+                        'quarantined_by_user_id' => get_current_user_id(),
+                    ],
+                    ['id' => $threat_id],
+                    ['%s', '%s', '%d'],
+                    ['%d']
+                );
+                
+                wp_send_json_success([
+                    'message' => __('Threat quarantined successfully.', 'secure-aura'),
+                    'threat_id' => $threat_id
+                ]);
+            } else {
+                wp_send_json_error([
+                    'message' => __('Failed to quarantine threat.', 'secure-aura')
+                ]);
+            }
+            
+        } catch (Exception $e) {
+            wp_send_json_error([
+                'message' => __('Failed to quarantine threat: ', 'secure-aura') . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Handle Save Settings
+     *
+     * @since    3.0.0
+     */
+    public function handle_save_settings() {
+        // Verify nonce
+        if (!wp_verify_nonce($_POST['nonce'], 'secure_aura_nonce')) {
+            wp_send_json_error([
+                'message' => __('Security verification failed.', 'secure-aura')
+            ]);
+        }
+
+        // Check user permissions
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => __('Insufficient permissions.', 'secure-aura')
+            ]);
+        }
+
+        try {
+            $settings = $_POST['settings'] ?? [];
+            
+            // Sanitize settings
+            $sanitized_settings = $this->sanitize_settings($settings);
+            
+            // Validate settings
+            $validation_result = $this->validate_settings($sanitized_settings);
+            
+            if (!$validation_result['valid']) {
+                wp_send_json_error([
+                    'message' => __('Settings validation failed: ', 'secure-aura') . $validation_result['message']
+                ]);
+            }
+            
+            // Save settings
+            update_option('secure_aura_settings', $sanitized_settings);
+            
+            // Log settings change
+            if ($this->db_manager) {
+                $this->db_manager->log_event(
+                    'settings_updated',
+                    [
+                        'updated_by_user_id' => get_current_user_id(),
+                        'settings_changed' => array_keys($sanitized_settings),
+                    ],
+                    'low'
+                );
+            }
+            
+            wp_send_json_success([
+                'message' => __('Settings saved successfully.', 'secure-aura'),
+                'saved_at' => current_time('mysql')
+            ]);
+            
+        } catch (Exception $e) {
+            wp_send_json_error([
+                'message' => __('Failed to save settings: ', 'secure-aura') . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Helper Methods
+     */
 
     /**
      * Get current scan status.
      *
      * @since    3.0.0
-     * @return   array Scan status information.
+     * @return   array Current scan status.
      */
     private function get_current_scan_status() {
-        $scan_progress = get_transient('secure_aura_scan_progress');
-        $scan_in_progress = get_transient('secure_aura_scan_in_progress');
+        $progress = get_transient('secure_aura_scan_progress');
+        $in_progress = get_transient('secure_aura_scan_in_progress');
         
-        if ($scan_progress && $scan_in_progress) {
+        if ($progress && $in_progress) {
             return [
                 'status' => 'running',
-                'progress' => $scan_progress
+                'progress' => $progress,
+            ];
+        }
+        
+        $last_scan = get_option('secure_aura_last_scan_results');
+        if ($last_scan) {
+            return [
+                'status' => 'completed',
+                'last_scan' => $last_scan,
             ];
         }
         
         return [
             'status' => 'idle',
-            'last_scan' => get_option('secure_aura_last_scan_results', [])
+            'last_scan' => null,
         ];
     }
 
@@ -939,282 +1015,6 @@ class Secure_Aura_Ajax_Handler {
                 'xmlrpc_enabled' => $this->check_xmlrpc_status()
             ]
         ];
-    }
-
-    /**
-     * Format activity message for display.
-     *
-     * @since    3.0.0
-     * @param    object $activity Activity data.
-     * @return   string Formatted message.
-     */
-    private function format_activity_message($activity) {
-        $messages = [
-            'malware_detected' => __('Malware detected and quarantined', 'secure-aura'),
-            'login_failed' => sprintf(__('Failed login attempt from %s', 'secure-aura'), $activity->source_ip),
-            'brute_force_attempt' => sprintf(__('Brute force attack blocked from %s', 'secure-aura'), $activity->source_ip),
-            'file_quarantined' => __('Malicious file quarantined', 'secure-aura'),
-            'scan_completed' => __('Security scan completed', 'secure-aura'),
-            'emergency_mode_activated' => __('Emergency mode activated', 'secure-aura'),
-            'emergency_mode_deactivated' => __('Emergency mode deactivated', 'secure-aura'),
-            'ip_blocked' => sprintf(__('IP %s blocked', 'secure-aura'), $activity->source_ip),
-            'suspicious_activity' => __('Suspicious activity detected', 'secure-aura')
-        ];
-        
-        return $messages[$activity->event_type] ?? ucwords(str_replace('_', ' ', $activity->event_type));
-    }
-
-    /**
-     * Log emergency mode action.
-     *
-     * @since    3.0.0
-     * @param    bool $activated Whether emergency mode was activated.
-     */
-    private function log_emergency_action($activated) {
-        global $wpdb;
-        
-        $table_name = $wpdb->prefix . SECURE_AURA_TABLE_LOGS;
-        
-        $wpdb->insert($table_name, [
-            'event_type' => $activated ? 'emergency_mode_activated' : 'emergency_mode_deactivated',
-            'severity' => SECURE_AURA_SEVERITY_HIGH,
-            'source_ip' => $this->get_client_ip(),
-            'user_id' => get_current_user_id(),
-            'event_data' => json_encode([
-                'emergency_mode' => $activated,
-                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? '',
-                'timestamp' => current_time('mysql')
-            ]),
-            'response_action' => 'emergency_mode_toggle'
-        ]);
-    }
-
-    /**
-     * Log IP block action.
-     *
-     * @since    3.0.0
-     * @param    string $ip_address Blocked IP.
-     * @param    string $reason     Block reason.
-     */
-    private function log_ip_block_action($ip_address, $reason) {
-        global $wpdb;
-        
-        $table_name = $wpdb->prefix . SECURE_AURA_TABLE_LOGS;
-        
-        $wpdb->insert($table_name, [
-            'event_type' => 'ip_blocked',
-            'severity' => SECURE_AURA_SEVERITY_MEDIUM,
-            'source_ip' => $ip_address,
-            'user_id' => get_current_user_id(),
-            'event_data' => json_encode([
-                'blocked_ip' => $ip_address,
-                'reason' => $reason,
-                'blocked_by' => get_current_user_id(),
-                'timestamp' => current_time('mysql')
-            ]),
-            'response_action' => 'ip_blocked'
-        ]);
-    }
-
-    /**
-     * Log IP unblock action.
-     *
-     * @since    3.0.0
-     * @param    string $ip_address Unblocked IP.
-     */
-    private function log_ip_unblock_action($ip_address) {
-        global $wpdb;
-        
-        $table_name = $wpdb->prefix . SECURE_AURA_TABLE_LOGS;
-        
-        $wpdb->insert($table_name, [
-            'event_type' => 'ip_unblocked',
-            'severity' => SECURE_AURA_SEVERITY_INFO,
-            'source_ip' => $ip_address,
-            'user_id' => get_current_user_id(),
-            'event_data' => json_encode([
-                'unblocked_ip' => $ip_address,
-                'unblocked_by' => get_current_user_id(),
-                'timestamp' => current_time('mysql')
-            ]),
-            'response_action' => 'ip_unblocked'
-        ]);
-    }
-
-    /**
-     * Update .htaccess with emergency rules.
-     *
-     * @since    3.0.0
-     */
-    private function update_htaccess_emergency_rules() {
-        $htaccess_file = ABSPATH . '.htaccess';
-        
-        if (!is_writable($htaccess_file)) {
-            return false;
-        }
-        
-        $emergency_rules = "
-# SecureAura Emergency Mode Rules - START
-<Files \"wp-config.php\">
-    Order allow,deny
-    Deny from all
-</Files>
-
-<Files \"error_log\">
-    Order allow,deny
-    Deny from all
-</Files>
-
-# Block suspicious request methods
-<Limit GET POST HEAD>
-    deny from all
-</Limit>
-
-# Block common attack patterns
-RewriteEngine On
-RewriteCond %{QUERY_STRING} (eval\() [NC,OR]
-RewriteCond %{QUERY_STRING} (127\.0\.0\.1) [NC,OR]
-RewriteCond %{QUERY_STRING} (localhost) [NC,OR]
-RewriteCond %{QUERY_STRING} (<|%3C).*script.*(>|%3E) [NC,OR]
-RewriteCond %{QUERY_STRING} GLOBALS(=|\[|\%[0-9A-Z]{0,2}) [OR]
-RewriteCond %{QUERY_STRING} _REQUEST(=|\[|\%[0-9A-Z]{0,2}) [OR]
-RewriteCond %{QUERY_STRING} proc/self/environ [OR]
-RewriteCond %{QUERY_STRING} mosConfig_[a-zA-Z_]{1,21}(=|\%3D) [OR]
-RewriteCond %{QUERY_STRING} base64_(en|de)code\(.*\) [OR]
-RewriteCond %{QUERY_STRING} (\[|\]|\(|\)|<|>|ê||;|\?|\*|\.|='|'|\$|_SESSION) [NC]
-RewriteRule .* - [F]";
-        
-        $htaccess_content = file_get_contents($htaccess_file);
-        
-        // Remove existing emergency rules if any
-        $htaccess_content = preg_replace('/# SecureAura Emergency Mode Rules - START.*# SecureAura Emergency Mode Rules - END\s*/s', '', $htaccess_content);
-        
-        // Add new emergency rules at the top
-        $new_content = $emergency_rules . $htaccess_content;
-        
-        return file_put_contents($htaccess_file, $new_content) !== false;
-    }
-
-    /**
-     * Remove emergency .htaccess rules.
-     *
-     * @since    3.0.0
-     */
-    private function remove_htaccess_emergency_rules() {
-        $htaccess_file = ABSPATH . '.htaccess';
-        
-        if (!file_exists($htaccess_file) || !is_writable($htaccess_file)) {
-            return false;
-        }
-        
-        $htaccess_content = file_get_contents($htaccess_file);
-        
-        // Remove emergency rules
-        $new_content = preg_replace('/# SecureAura Emergency Mode Rules - START.*# SecureAura Emergency Mode Rules - END\s*/s', '', $htaccess_content);
-        
-        return file_put_contents($htaccess_file, $new_content) !== false;
-    }
-
-    /**
-     * Update .htaccess with blocked IPs.
-     *
-     * @since    3.0.0
-     */
-    private function update_htaccess_blocked_ips() {
-        global $wpdb;
-        
-        $htaccess_file = ABSPATH . '.htaccess';
-        
-        if (!is_writable($htaccess_file)) {
-            return false;
-        }
-        
-        // Get currently blocked IPs
-        $table_name = $wpdb->prefix . SECURE_AURA_TABLE_BLOCKED_IPS;
-        $blocked_ips = $wpdb->get_col("
-            SELECT ip_address FROM {$table_name} 
-            WHERE (expires_at IS NULL OR expires_at > NOW())
-            AND ip_address IS NOT NULL
-            ORDER BY blocked_at DESC
-            LIMIT 1000
-        ");
-        
-        $htaccess_content = file_get_contents($htaccess_file);
-        
-        // Remove existing IP block rules
-        $htaccess_content = preg_replace('/# SecureAura IP Blocks - START.*# SecureAura IP Blocks - END\s*/s', '', $htaccess_content);
-        
-        if (!empty($blocked_ips)) {
-            $ip_rules = "# SecureAura IP Blocks - START\n";
-            $ip_rules .= "<RequireAll>\n";
-            $ip_rules .= "    Require all granted\n";
-            
-            foreach ($blocked_ips as $ip) {
-                if (filter_var($ip, FILTER_VALIDATE_IP)) {
-                    $ip_rules .= "    Require not ip {$ip}\n";
-                }
-            }
-            
-            $ip_rules .= "</RequireAll>\n";
-            $ip_rules .= "# SecureAura IP Blocks - END\n\n";
-            
-            // Add IP rules at the top
-            $htaccess_content = $ip_rules . $htaccess_content;
-        }
-        
-        return file_put_contents($htaccess_file, $htaccess_content) !== false;
-    }
-
-    /**
-     * Parse IP information response from different APIs.
-     *
-     * @since    3.0.0
-     * @param    array  $data       API response data.
-     * @param    string $service_url Service URL for context.
-     * @return   array  Parsed IP information.
-     */
-    private function parse_ip_info_response($data, $service_url) {
-        $ip_info = [
-            'country' => 'Unknown',
-            'region' => 'Unknown',
-            'city' => 'Unknown',
-            'asn' => '',
-            'organization' => '',
-            'is_tor' => false,
-            'is_vpn' => false,
-            'is_proxy' => false
-        ];
-        
-        // Parse based on service
-        if (strpos($service_url, 'ip-api.com') !== false) {
-            $ip_info['country'] = $data['country'] ?? 'Unknown';
-            $ip_info['region'] = $data['regionName'] ?? 'Unknown';
-            $ip_info['city'] = $data['city'] ?? 'Unknown';
-            $ip_info['asn'] = $data['as'] ?? '';
-            $ip_info['organization'] = $data['org'] ?? '';
-            $ip_info['is_proxy'] = isset($data['proxy']) && $data['proxy'];
-        } elseif (strpos($service_url, 'ipapi.co') !== false) {
-            $ip_info['country'] = $data['country_name'] ?? 'Unknown';
-            $ip_info['region'] = $data['region'] ?? 'Unknown';
-            $ip_info['city'] = $data['city'] ?? 'Unknown';
-            $ip_info['asn'] = $data['asn'] ?? '';
-            $ip_info['organization'] = $data['org'] ?? '';
-        }
-        
-        return $ip_info;
-    }
-
-    /**
-     * Test database connection.
-     *
-     * @since    3.0.0
-     * @return   bool True if database is accessible.
-     */
-    private function test_database_connection() {
-        global $wpdb;
-        
-        $result = $wpdb->get_var("SELECT 1");
-        return $result == 1;
     }
 
     /**
@@ -1269,6 +1069,612 @@ RewriteRule .* - [F]";
     }
 
     /**
+     * Calculate security score.
+     *
+     * @since    3.0.0
+     * @return   int Security score (0-100).
+     */
+    private function calculate_security_score() {
+        $score = get_transient('secure_aura_security_score');
+        
+        if ($score === false) {
+            $score = 0;
+            $checks = [
+                'ssl_enabled' => is_ssl() ? 15 : 0,
+                'file_editor_disabled' => (defined('DISALLOW_FILE_EDIT') && DISALLOW_FILE_EDIT) ? 10 : 0,
+                'strong_passwords' => get_option('secure_aura_force_strong_passwords', false) ? 10 : 0,
+                'firewall_enabled' => get_option('secure_aura_quantum_firewall_enabled', true) ? 20 : 0,
+                'scanner_enabled' => get_option('secure_aura_real_time_scanning_enabled', true) ? 15 : 0,
+                'updates_available' => $this->check_updates_available() ? 0 : 10,
+                'wp_version_hidden' => get_option('secure_aura_hide_wp_version', false) ? 5 : 0,
+                'login_attempts_limited' => get_option('secure_aura_limit_login_attempts', false) ? 10 : 0,
+                'xmlrpc_disabled' => !$this->check_xmlrpc_status() ? 5 : 0,
+            ];
+            
+            $score = array_sum($checks);
+            set_transient('secure_aura_security_score', $score, HOUR_IN_SECONDS);
+        }
+        
+        return min(100, max(0, $score));
+    }
+
+    /**
+     * Get recent activities.
+     *
+     * @since    3.0.0
+     * @param    int $limit Number of activities to return.
+     * @return   array Recent activities.
+     */
+    private function get_recent_activities($limit = 10) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . SECURE_AURA_TABLE_LOGS;
+        
+        $activities = $wpdb->get_results($wpdb->prepare("
+            SELECT event_type, ip_address, created_at, event_data
+            FROM {$table_name} 
+            ORDER BY created_at DESC 
+            LIMIT %d
+        ", $limit));
+        
+        $formatted_activities = [];
+        foreach ($activities as $activity) {
+            $formatted_activities[] = [
+                'time' => $this->time_ago($activity->created_at),
+                'message' => $this->format_activity_message($activity),
+            ];
+        }
+        
+        return $formatted_activities;
+    }
+
+    /**
+     * Get active threats count.
+     *
+     * @since    3.0.0
+     * @return   int Active threats count.
+     */
+    private function get_active_threats_count() {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . SECURE_AURA_TABLE_THREATS;
+        
+        $count = $wpdb->get_var("
+            SELECT COUNT(*) FROM {$table_name} 
+            WHERE status = 'active'
+        ");
+        
+        return intval($count);
+    }
+
+    /**
+     * Check if IP is already blocked.
+     *
+     * @since    3.0.0
+     * @param    string $ip_address IP address to check.
+     * @return   bool True if blocked, false otherwise.
+     */
+    private function is_ip_blocked($ip_address) {
+        global $wpdb;
+        
+        $table_name = $wpdb->prefix . SECURE_AURA_TABLE_BLOCKED_IPS;
+        
+        $count = $wpdb->get_var($wpdb->prepare("
+            SELECT COUNT(*) FROM {$table_name} 
+            WHERE ip_address = %s AND is_active = 1
+        ", $ip_address));
+        
+        return intval($count) > 0;
+    }
+
+    /**
+     * Get client IP address.
+     *
+     * @since    3.0.0
+     * @return   string Client IP address.
+     */
+    private function get_client_ip() {
+        $ip_keys = ['HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP', 'HTTP_CLIENT_IP', 'REMOTE_ADDR'];
+        
+        foreach ($ip_keys as $key) {
+            if (!empty($_SERVER[$key])) {
+                $ip = $_SERVER[$key];
+                if (strpos($ip, ',') !== false) {
+                    $ip = trim(explode(',', $ip)[0]);
+                }
+                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                    return $ip;
+                }
+            }
+        }
+        
+        return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    }
+
+    /**
+     * Format date for display.
+     *
+     * @since    3.0.0
+     * @param    string $date_string Date string.
+     * @return   string Formatted date.
+     */
+    private function format_date($date_string) {
+        $date = new DateTime($date_string);
+        return $date->format('M j, Y g:i A');
+    }
+
+    /**
+     * Time ago format.
+     *
+     * @since    3.0.0
+     * @param    string $date_string Date string.
+     * @return   string Time ago format.
+     */
+    private function time_ago($date_string) {
+        $time_ago = strtotime($date_string);
+        $current_time = current_time('timestamp');
+        $time_difference = $current_time - $time_ago;
+        
+        if ($time_difference < 60) {
+            return __('Just now', 'secure-aura');
+        } elseif ($time_difference < 3600) {
+            $minutes = floor($time_difference / 60);
+            return sprintf(_n('%d minute ago', '%d minutes ago', $minutes, 'secure-aura'), $minutes);
+        } elseif ($time_difference < 86400) {
+            $hours = floor($time_difference / 3600);
+            return sprintf(_n('%d hour ago', '%d hours ago', $hours, 'secure-aura'), $hours);
+        } else {
+            $days = floor($time_difference / 86400);
+            return sprintf(_n('%d day ago', '%d days ago', $days, 'secure-aura'), $days);
+        }
+    }
+
+    /**
+     * Format activity message for display.
+     *
+     * @since    3.0.0
+     * @param    object $activity Activity data.
+     * @return   string Formatted message.
+     */
+    private function format_activity_message($activity) {
+        $messages = [
+            'threat_blocked' => __('Threat blocked from IP: %s', 'secure-aura'),
+            'login_failed' => __('Failed login attempt from IP: %s', 'secure-aura'),
+            'scan_completed' => __('Security scan completed', 'secure-aura'),
+            'emergency_mode_activated' => __('Emergency mode activated', 'secure-aura'),
+            'ip_blocked_manually' => __('IP address manually blocked: %s', 'secure-aura'),
+            'file_quarantined' => __('Malicious file quarantined', 'secure-aura'),
+        ];
+        
+        $message_template = $messages[$activity->event_type] ?? __('Security event: %s', 'secure-aura');
+        
+        return sprintf($message_template, $activity->ip_address);
+    }
+
+    /**
+     * Send emergency mode notification.
+     *
+     * @since    3.0.0
+     * @param    string $action 'activated' or 'deactivated'.
+     */
+    private function send_emergency_mode_notification($action) {
+        $admin_email = get_option('admin_email');
+        $site_name = get_bloginfo('name');
+        
+        if ($action === 'activated') {
+            $subject = sprintf(__('[%s] Emergency Mode Activated', 'secure-aura'), $site_name);
+            $message = sprintf(
+                __('Emergency mode has been activated on your website %s at %s.
+
+This means maximum security protection is now enabled. Some site functionality may be temporarily limited.
+
+If this was not done by you, please check your site immediately.
+
+You can deactivate emergency mode from the SecureAura dashboard.', 'secure-aura'),
+                home_url(),
+                current_time('mysql')
+            );
+        } else {
+            $subject = sprintf(__('[%s] Emergency Mode Deactivated', 'secure-aura'), $site_name);
+            $message = sprintf(
+                __('Emergency mode has been deactivated on your website %s at %s.
+
+Normal security settings have been restored.', 'secure-aura'),
+                home_url(),
+                current_time('mysql')
+            );
+        }
+        
+        wp_mail($admin_email, $subject, $message);
+    }
+
+    /**
+     * Apply IP block to .htaccess.
+     *
+     * @since    3.0.0
+     * @param    string $ip_address IP address to block.
+     */
+    private function apply_ip_block_to_htaccess($ip_address) {
+        $htaccess_file = ABSPATH . '.htaccess';
+        
+        if (!is_writable($htaccess_file)) {
+            return false;
+        }
+        
+        $htaccess_content = file_get_contents($htaccess_file);
+        $block_rule = "Deny from {$ip_address}\n";
+        
+        // Check if rule already exists
+        if (strpos($htaccess_content, $block_rule) === false) {
+            // Add rule at the beginning
+            $new_content = "# SecureAura IP Block\n" . $block_rule . "\n" . $htaccess_content;
+            file_put_contents($htaccess_file, $new_content);
+        }
+        
+        return true;
+    }
+
+    /**
+     * Remove IP block from .htaccess.
+     *
+     * @since    3.0.0
+     * @param    string $ip_address IP address to unblock.
+     */
+    private function remove_ip_block_from_htaccess($ip_address) {
+        $htaccess_file = ABSPATH . '.htaccess';
+        
+        if (!is_writable($htaccess_file)) {
+            return false;
+        }
+        
+        $htaccess_content = file_get_contents($htaccess_file);
+        $block_rule = "Deny from {$ip_address}";
+        
+        // Remove the rule
+        $new_content = str_replace($block_rule, '', $htaccess_content);
+        $new_content = preg_replace('/\n\s*\n/', "\n", $new_content); // Remove empty lines
+        
+        file_put_contents($htaccess_file, $new_content);
+        
+        return true;
+    }
+
+    /**
+     * Quarantine file.
+     *
+     * @since    3.0.0
+     * @param    string $file_path File path to quarantine.
+     * @param    int    $threat_id Threat ID.
+     * @return   bool   True on success, false on failure.
+     */
+    private function quarantine_file($file_path, $threat_id) {
+        if (!file_exists($file_path)) {
+            return false;
+        }
+        
+        $quarantine_dir = SECURE_AURA_QUARANTINE_DIR;
+        if (!file_exists($quarantine_dir)) {
+            wp_mkdir_p($quarantine_dir);
+        }
+        
+        $quarantine_filename = 'threat_' . $threat_id . '_' . basename($file_path) . '.quarantine';
+        $quarantine_path = $quarantine_dir . $quarantine_filename;
+        
+        // Move file to quarantine
+        $result = rename($file_path, $quarantine_path);
+        
+        if ($result) {
+            // Log quarantine action
+            global $wpdb;
+            $quarantine_table = $wpdb->prefix . SECURE_AURA_TABLE_QUARANTINE;
+            
+            $wpdb->insert(
+                $quarantine_table,
+                [
+                    'threat_id' => $threat_id,
+                    'original_path' => $file_path,
+                    'quarantine_path' => $quarantine_path,
+                    'quarantined_by_user_id' => get_current_user_id(),
+                    'quarantined_at' => current_time('mysql'),
+                ],
+                ['%d', '%s', '%s', '%d', '%s']
+            );
+        }
+        
+        return $result;
+    }
+
+    /**
+     * Sanitize settings array.
+     *
+     * @since    3.0.0
+     * @param    array $settings Settings to sanitize.
+     * @return   array Sanitized settings.
+     */
+    private function sanitize_settings($settings) {
+        $sanitized = [];
+        
+        foreach ($settings as $key => $value) {
+            switch ($key) {
+                case 'max_login_attempts':
+                case 'scan_frequency_hours':
+                case 'log_retention_days':
+                    $sanitized[$key] = intval($value);
+                    break;
+                    
+                case 'admin_email':
+                    $sanitized[$key] = sanitize_email($value);
+                    break;
+                    
+                case 'quantum_firewall_enabled':
+                case 'real_time_scanning_enabled':
+                case 'emergency_mode':
+                    $sanitized[$key] = (bool) $value;
+                    break;
+                    
+                default:
+                    $sanitized[$key] = sanitize_text_field($value);
+                    break;
+            }
+        }
+        
+        return $sanitized;
+    }
+
+    /**
+     * Validate settings.
+     *
+     * @since    3.0.0
+     * @param    array $settings Settings to validate.
+     * @return   array Validation result.
+     */
+    private function validate_settings($settings) {
+        $errors = [];
+        
+        // Validate email if provided
+        if (!empty($settings['admin_email']) && !is_email($settings['admin_email'])) {
+            $errors[] = __('Invalid admin email address.', 'secure-aura');
+        }
+        
+        // Validate numeric values
+        if (isset($settings['max_login_attempts']) && ($settings['max_login_attempts'] < 1 || $settings['max_login_attempts'] > 20)) {
+            $errors[] = __('Max login attempts must be between 1 and 20.', 'secure-aura');
+        }
+        
+        if (isset($settings['scan_frequency_hours']) && ($settings['scan_frequency_hours'] < 1 || $settings['scan_frequency_hours'] > 168)) {
+            $errors[] = __('Scan frequency must be between 1 and 168 hours.', 'secure-aura');
+        }
+        
+        if (isset($settings['log_retention_days']) && ($settings['log_retention_days'] < 1 || $settings['log_retention_days'] > 365)) {
+            $errors[] = __('Log retention must be between 1 and 365 days.', 'secure-aura');
+        }
+        
+        return [
+            'valid' => empty($errors),
+            'message' => implode(' ', $errors)
+        ];
+    }
+
+    /**
+     * Clear all caches.
+     *
+     * @since    3.0.0
+     */
+    private function clear_all_caches() {
+        // WordPress caches
+        wp_cache_flush();
+        
+        // Plugin caches
+        delete_transient('secure_aura_dashboard_cache');
+        delete_transient('secure_aura_security_score');
+        delete_transient('secure_aura_threat_intel_cache');
+        delete_transient('secure_aura_malware_signatures');
+        
+        // Clear any object cache
+        if (function_exists('wp_cache_clear_cache')) {
+            wp_cache_clear_cache();
+        }
+    }
+
+    /**
+     * Clear suspicious sessions.
+     *
+     * @since    3.0.0
+     */
+    private function clear_suspicious_sessions() {
+        global $wpdb;
+        
+        // Get current time minus 24 hours
+        $time_limit = date('Y-m-d H:i:s', strtotime('-24 hours'));
+        
+        // Clear sessions from suspicious IPs
+        $suspicious_ips = $wpdb->get_col($wpdb->prepare("
+            SELECT DISTINCT ip_address 
+            FROM {$wpdb->prefix}" . SECURE_AURA_TABLE_LOGS . " 
+            WHERE event_type IN ('failed_login', 'brute_force_attempt', 'suspicious_activity')
+            AND created_at > %s
+            GROUP BY ip_address
+            HAVING COUNT(*) > 5
+        ", $time_limit));
+        
+        foreach ($suspicious_ips as $ip) {
+            // Destroy sessions for this IP
+            $this->destroy_sessions_by_ip($ip);
+        }
+    }
+
+    /**
+     * Destroy sessions by IP.
+     *
+     * @since    3.0.0
+     * @param    string $ip_address IP address.
+     */
+    private function destroy_sessions_by_ip($ip_address) {
+        // This is a placeholder for session destruction logic
+        // In a real implementation, you'd need to track sessions by IP
+        // and destroy them accordingly
+        
+        // Log the action
+        if ($this->db_manager) {
+            $this->db_manager->log_event(
+                'suspicious_sessions_cleared',
+                [
+                    'target_ip' => $ip_address,
+                    'cleared_by_emergency_mode' => true,
+                ],
+                'medium'
+            );
+        }
+    }
+
+    /**
+     * Update .htaccess security rules.
+     *
+     * @since    3.0.0
+     */
+    private function update_htaccess_security_rules() {
+        $htaccess_file = ABSPATH . '.htaccess';
+        
+        if (!is_writable($htaccess_file)) {
+            return false;
+        }
+        
+        $security_rules = "
+# SecureAura Security Rules - Emergency Mode
+<Files wp-config.php>
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files .htaccess>
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Disable directory browsing
+Options -Indexes
+
+# Protect against script injections
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{QUERY_STRING} (<|%3C)([^s]*s)+cript.*(>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} GLOBALS(=|[|%[0-9A-Z]{0,2}) [OR]
+    RewriteCond %{QUERY_STRING} _REQUEST(=|[|%[0-9A-Z]{0,2}) [OR]
+    RewriteCond %{QUERY_STRING} proc/self/environ [OR]
+    RewriteCond %{QUERY_STRING} mosConfig_[a-zA-Z_]{1,21}(=|%3D) [OR]
+    RewriteCond %{QUERY_STRING} base64_(en|de)code[^(]*\([^)]*\) [OR]
+    RewriteCond %{QUERY_STRING} (<|%3C)([^s]*s)+cript.*(>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} (\.|%2E)(\.|%2E)(%2F|/) [NC,OR]
+    RewriteCond %{QUERY_STRING} ftp\: [NC,OR]
+    RewriteCond %{QUERY_STRING} http\: [NC,OR]
+    RewriteCond %{QUERY_STRING} https\: [NC,OR]
+    RewriteCond %{QUERY_STRING} \=PHP[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} [NC,OR]
+    RewriteCond %{QUERY_STRING} (\.|%2E)(%2F|/) [NC,OR]
+    RewriteCond %{QUERY_STRING} \.$
+    RewriteRule .* - [F,L]
+</IfModule>
+
+# Block access to sensitive files
+<FilesMatch \"(^#.*#|\.(bak|config|dist|fla|inc|ini|log|psd|sh|sql|sw[op])|~)$\">
+    Order allow,deny
+    Deny from all
+    Satisfy All
+</FilesMatch>
+
+";
+        
+        $current_content = file_get_contents($htaccess_file);
+        
+        // Remove existing SecureAura rules
+        $pattern = '/# SecureAura Security Rules.*?# End SecureAura Security Rules/s';
+        $current_content = preg_replace($pattern, '', $current_content);
+        
+        // Add new rules at the beginning
+        $new_content = $security_rules . "\n" . $current_content;
+        
+        return file_put_contents($htaccess_file, $new_content);
+    }
+
+    /**
+     * Block suspicious IPs.
+     *
+     * @since    3.0.0
+     */
+    private function block_suspicious_ips() {
+        global $wpdb;
+        
+        // Get IPs with multiple failed attempts in last hour
+        $suspicious_ips = $wpdb->get_results("
+            SELECT ip_address, COUNT(*) as attempt_count
+            FROM {$wpdb->prefix}" . SECURE_AURA_TABLE_LOGS . "
+            WHERE event_type IN ('failed_login', 'brute_force_attempt')
+            AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
+            GROUP BY ip_address
+            HAVING attempt_count >= 5
+        ");
+        
+        $blocked_table = $wpdb->prefix . SECURE_AURA_TABLE_BLOCKED_IPS;
+        
+        foreach ($suspicious_ips as $ip_data) {
+            // Check if IP is already blocked
+            $existing = $wpdb->get_var($wpdb->prepare("
+                SELECT COUNT(*) FROM {$blocked_table}
+                WHERE ip_address = %s AND is_active = 1
+            ", $ip_data->ip_address));
+            
+            if ($existing == 0) {
+                // Block the IP
+                $wpdb->insert(
+                    $blocked_table,
+                    [
+                        'ip_address' => $ip_data->ip_address,
+                        'reason' => sprintf(__('Automatically blocked due to %d suspicious attempts', 'secure-aura'), $ip_data->attempt_count),
+                        'blocked_by_user_id' => 0, // System blocked
+                        'is_active' => 1,
+                        'is_permanent' => 0,
+                        'blocked_at' => current_time('mysql'),
+                        'expires_at' => date('Y-m-d H:i:s', strtotime('+24 hours')),
+                        'threat_type' => 'brute_force',
+                    ],
+                    ['%s', '%s', '%d', '%d', '%d', '%s', '%s', '%s']
+                );
+                
+                // Apply to .htaccess
+                $this->apply_ip_block_to_htaccess($ip_data->ip_address);
+            }
+        }
+    }
+
+    /**
+     * Calculate emergency mode duration.
+     *
+     * @since    3.0.0
+     * @return   string Duration in human readable format.
+     */
+    private function calculate_emergency_mode_duration() {
+        $activated_at = get_option('secure_aura_emergency_mode_activated_at');
+        
+        if (!$activated_at) {
+            return __('Unknown', 'secure-aura');
+        }
+        
+        $activated_time = strtotime($activated_at);
+        $current_time = current_time('timestamp');
+        $duration = $current_time - $activated_time;
+        
+        if ($duration < 60) {
+            return sprintf(__('%d seconds', 'secure-aura'), $duration);
+        } elseif ($duration < 3600) {
+            $minutes = floor($duration / 60);
+            return sprintf(__('%d minutes', 'secure-aura'), $minutes);
+        } else {
+            $hours = floor($duration / 3600);
+            $minutes = floor(($duration % 3600) / 60);
+            return sprintf(__('%d hours %d minutes', 'secure-aura'), $hours, $minutes);
+        }
+    }
+
+    /**
      * Check WordPress configuration security.
      *
      * @since    3.0.0
@@ -1317,48 +1723,48 @@ RewriteRule .* - [F]";
     }
 
     /**
-     * Get client IP address.
+     * Check if updates are available.
      *
      * @since    3.0.0
-     * @return   string Client IP address.
+     * @return   bool True if updates are available.
      */
-    private function get_client_ip() {
-        $ip_headers = [
-            'HTTP_CF_CONNECTING_IP',
-            'HTTP_X_FORWARDED_FOR',
-            'HTTP_X_FORWARDED',
-            'HTTP_X_CLUSTER_CLIENT_IP',
-            'HTTP_FORWARDED_FOR',
-            'HTTP_FORWARDED',
-            'REMOTE_ADDR'
-        ];
-        
-        foreach ($ip_headers as $header) {
-            if (!empty($_SERVER[$header])) {
-                $ip = trim(explode(',', $_SERVER[$header])[0]);
-                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-                    return $ip;
-                }
-            }
+    private function check_updates_available() {
+        // Check WordPress core updates
+        $core_updates = get_core_updates();
+        if (!empty($core_updates) && $core_updates[0]->response === 'upgrade') {
+            return true;
         }
         
-        return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        // Check plugin updates
+        $plugin_updates = get_site_transient('update_plugins');
+        if (!empty($plugin_updates->response)) {
+            return true;
+        }
+        
+        // Check theme updates
+        $theme_updates = get_site_transient('update_themes');
+        if (!empty($theme_updates->response)) {
+            return true;
+        }
+        
+        return false;
     }
 
     /**
-     * Cleanup AJAX handler resources.
+     * Cleanup method.
      *
      * @since    3.0.0
      */
     public function cleanup() {
         // Remove AJAX hooks
-        remove_action('wp_ajax_secure_aura_toggle_emergency', [$this, 'handle_toggle_emergency']);
+        remove_action('wp_ajax_secure_aura_emergency_mode', [$this, 'handle_emergency_mode']);
+        remove_action('wp_ajax_secure_aura_get_blocked_ips', [$this, 'handle_get_blocked_ips']);
         remove_action('wp_ajax_secure_aura_block_ip', [$this, 'handle_block_ip']);
         remove_action('wp_ajax_secure_aura_unblock_ip', [$this, 'handle_unblock_ip']);
-        // ... remove other hooks
-        
-        // Clear any temporary data
-        delete_transient('secure_aura_ajax_cache');
+        remove_action('wp_ajax_secure_aura_start_scan', [$this, 'handle_start_scan']);
+        remove_action('wp_ajax_secure_aura_get_scan_progress', [$this, 'handle_get_scan_progress']);
+        remove_action('wp_ajax_secure_aura_get_system_info', [$this, 'handle_get_system_info']);
+        remove_action('wp_ajax_secure_aura_get_realtime_data', [$this, 'handle_get_realtime_data']);
     }
 }
 

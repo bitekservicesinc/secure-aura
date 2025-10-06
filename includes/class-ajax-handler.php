@@ -1540,48 +1540,48 @@ Normal security settings have been restored.', 'secure-aura'),
         }
         
         $security_rules = "
-# SecureAura Security Rules - Emergency Mode
-<Files wp-config.php>
-    Order allow,deny
-    Deny from all
-</Files>
+            # SecureAura Security Rules - Emergency Mode
+            <Files wp-config.php>
+                Order allow,deny
+                Deny from all
+            </Files>
 
-<Files .htaccess>
-    Order allow,deny
-    Deny from all
-</Files>
+            <Files .htaccess>
+                Order allow,deny
+                Deny from all
+            </Files>
 
-# Disable directory browsing
-Options -Indexes
+            # Disable directory browsing
+            Options -Indexes
 
-# Protect against script injections
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteCond %{QUERY_STRING} (<|%3C)([^s]*s)+cript.*(>|%3E) [NC,OR]
-    RewriteCond %{QUERY_STRING} GLOBALS(=|[|%[0-9A-Z]{0,2}) [OR]
-    RewriteCond %{QUERY_STRING} _REQUEST(=|[|%[0-9A-Z]{0,2}) [OR]
-    RewriteCond %{QUERY_STRING} proc/self/environ [OR]
-    RewriteCond %{QUERY_STRING} mosConfig_[a-zA-Z_]{1,21}(=|%3D) [OR]
-    RewriteCond %{QUERY_STRING} base64_(en|de)code[^(]*\([^)]*\) [OR]
-    RewriteCond %{QUERY_STRING} (<|%3C)([^s]*s)+cript.*(>|%3E) [NC,OR]
-    RewriteCond %{QUERY_STRING} (\.|%2E)(\.|%2E)(%2F|/) [NC,OR]
-    RewriteCond %{QUERY_STRING} ftp\: [NC,OR]
-    RewriteCond %{QUERY_STRING} http\: [NC,OR]
-    RewriteCond %{QUERY_STRING} https\: [NC,OR]
-    RewriteCond %{QUERY_STRING} \=PHP[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} [NC,OR]
-    RewriteCond %{QUERY_STRING} (\.|%2E)(%2F|/) [NC,OR]
-    RewriteCond %{QUERY_STRING} \.$
-    RewriteRule .* - [F,L]
-</IfModule>
+            # Protect against script injections
+            <IfModule mod_rewrite.c>
+                RewriteEngine On
+                RewriteCond %{QUERY_STRING} (<|%3C)([^s]*s)+cript.*(>|%3E) [NC,OR]
+                RewriteCond %{QUERY_STRING} GLOBALS(=|[|%[0-9A-Z]{0,2}) [OR]
+                RewriteCond %{QUERY_STRING} _REQUEST(=|[|%[0-9A-Z]{0,2}) [OR]
+                RewriteCond %{QUERY_STRING} proc/self/environ [OR]
+                RewriteCond %{QUERY_STRING} mosConfig_[a-zA-Z_]{1,21}(=|%3D) [OR]
+                RewriteCond %{QUERY_STRING} base64_(en|de)code[^(]*\([^)]*\) [OR]
+                RewriteCond %{QUERY_STRING} (<|%3C)([^s]*s)+cript.*(>|%3E) [NC,OR]
+                RewriteCond %{QUERY_STRING} (\.|%2E)(\.|%2E)(%2F|/) [NC,OR]
+                RewriteCond %{QUERY_STRING} ftp\: [NC,OR]
+                RewriteCond %{QUERY_STRING} http\: [NC,OR]
+                RewriteCond %{QUERY_STRING} https\: [NC,OR]
+                RewriteCond %{QUERY_STRING} \=PHP[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12} [NC,OR]
+                RewriteCond %{QUERY_STRING} (\.|%2E)(%2F|/) [NC,OR]
+                RewriteCond %{QUERY_STRING} \.$
+                RewriteRule .* - [F,L]
+            </IfModule>
 
-# Block access to sensitive files
-<FilesMatch \"(^#.*#|\.(bak|config|dist|fla|inc|ini|log|psd|sh|sql|sw[op])|~)$\">
-    Order allow,deny
-    Deny from all
-    Satisfy All
-</FilesMatch>
+            # Block access to sensitive files
+            <FilesMatch \"(^#.*#|\.(bak|config|dist|fla|inc|ini|log|psd|sh|sql|sw[op])|~)$\">
+                Order allow,deny
+                Deny from all
+                Satisfy All
+            </FilesMatch>
 
-";
+        ";
         
         $current_content = file_get_contents($htaccess_file);
         

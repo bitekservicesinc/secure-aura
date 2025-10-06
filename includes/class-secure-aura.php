@@ -1,4 +1,5 @@
 <?php
+
 /**
  * The core plugin class.
  *
@@ -19,7 +20,8 @@ if (!defined('ABSPATH')) {
     exit('Direct access denied.');
 }
 
-class Secure_Aura {
+class Secure_Aura
+{
 
     /**
      * The loader that's responsible for maintaining and registering all hooks that power
@@ -86,6 +88,15 @@ class Secure_Aura {
     protected $db_manager;
 
     /**
+     * Email notifications manager instance.
+     *
+     * @since    3.0.0
+     * @access   protected
+     * @var      Secure_Aura_Email_Notifications    $email_notifications    Email notifications manager instance.
+     */
+    protected $email_notifications;
+
+    /**
      * Define the core functionality of the plugin.
      *
      * Set the plugin name and the plugin version that can be used throughout the plugin.
@@ -94,17 +105,18 @@ class Secure_Aura {
      *
      * @since    3.0.0
      */
-    public function __construct() {
+    public function __construct()
+    {
         if (defined('SECURE_AURA_VERSION')) {
             $this->version = SECURE_AURA_VERSION;
         } else {
             $this->version = '3.0.0';
         }
-        
+
         $this->plugin_name = 'secure-aura';
         $this->modules = [];
         $this->components = [];
-        
+
         $this->load_dependencies();
         $this->load_configuration();
         $this->init_database_manager();
@@ -132,37 +144,38 @@ class Secure_Aura {
      * @since    3.0.0
      * @access   private
      */
-    private function load_dependencies() {
+    private function load_dependencies()
+    {
         $this->loader = new Secure_Aura_Loader();
-        
+
         // Load core classes
         $this->loader->load_core_classes();
-        
+
         // Load security modules
         $this->loader->load_security_modules();
-        
+
         // Load admin classes if in admin
         if (is_admin()) {
             $this->loader->load_admin_classes();
         }
-        
+
         // Load public classes
         $this->loader->load_public_classes();
-        
+
         // Load API classes if needed
         if (defined('REST_REQUEST') && REST_REQUEST) {
             $this->loader->load_api_classes();
         }
-        
+
         // Load conditional classes
         $this->loader->load_conditional_classes();
-        
+
         // Load license-based modules
         $this->loader->load_license_based_modules();
-        
+
         // Load third-party dependencies
         $this->loader->load_dependencies();
-        
+
         // Initialize loader hooks
         $this->loader->init_loader_hooks();
     }
@@ -173,7 +186,8 @@ class Secure_Aura {
      * @since    3.0.0
      * @access   private
      */
-    private function load_configuration() {
+    private function load_configuration()
+    {
         // Load default configuration
         $default_config_file = SECURE_AURA_PLUGIN_DIR . 'config/default-settings.php';
         if (file_exists($default_config_file)) {
@@ -181,11 +195,11 @@ class Secure_Aura {
         } else {
             $default_config = $this->get_default_config();
         }
-        
+
         // Merge with user settings
         $user_config = get_option('secure_aura_settings', []);
         $this->config = array_merge($default_config, $user_config);
-        
+
         // Apply filters to allow customization
         $this->config = apply_filters('secure_aura_config', $this->config);
     }
@@ -197,58 +211,59 @@ class Secure_Aura {
      * @access   private
      * @return   array    Default configuration array.
      */
-    private function get_default_config() {
+    private function get_default_config()
+    {
         return [
             // Security Level
             'security_level' => SECURE_AURA_LEVEL_ENHANCED,
-            
+
             // Core Features
             'quantum_firewall_enabled' => true,
             'ai_threat_detection_enabled' => true,
             'behavioral_monitoring_enabled' => true,
             'real_time_scanning_enabled' => true,
             'file_integrity_monitoring_enabled' => true,
-            
+
             // Firewall Settings
             'firewall_mode' => 'learning', // learning, blocking, monitoring
             'auto_block_malicious_ips' => true,
             'geo_blocking_enabled' => false,
             'tor_blocking_enabled' => false,
             'vpn_blocking_enabled' => false,
-            
+
             // AI Settings
             'ai_threat_threshold' => 0.7,
             'ai_learning_mode' => true,
             'ai_model_updates_enabled' => true,
             'behavioral_anomaly_threshold' => 0.8,
-            
+
             // Scanning Settings
             'scan_frequency' => 'daily',
             'deep_scan_enabled' => true,
             'quarantine_malware' => true,
             'auto_clean_infections' => false,
             'scan_file_size_limit' => 50 * 1024 * 1024, // 50MB
-            
+
             // Monitoring Settings
             'real_time_monitoring' => true,
             'log_retention_days' => 90,
             'performance_monitoring' => true,
             'compliance_monitoring' => false,
-            
+
             // Notification Settings
             'email_notifications' => true,
             'admin_email' => get_option('admin_email'),
             'notification_threshold' => SECURE_AURA_SEVERITY_HIGH,
             'slack_webhook_url' => '',
             'custom_webhook_url' => '',
-            
+
             // Advanced Settings
             'debug_mode' => false,
             'api_rate_limiting' => true,
             'database_protection' => true,
             'memory_protection' => true,
             'emergency_mode' => false,
-            
+
             // License Settings
             'license_key' => '',
             'license_type' => SECURE_AURA_LICENSE_FREE,
@@ -262,7 +277,8 @@ class Secure_Aura {
      * @since    3.0.0
      * @access   private
      */
-    private function init_database_manager() {
+    private function init_database_manager()
+    {
         if (class_exists('Secure_Aura_Database_Manager')) {
             $this->db_manager = new Secure_Aura_Database_Manager();
             $this->components['database'] = $this->db_manager;
@@ -278,9 +294,10 @@ class Secure_Aura {
      * @since    3.0.0
      * @access   private
      */
-    private function set_locale() {
+    private function set_locale()
+    {
         $plugin_i18n = new Secure_Aura_i18n();
-        
+
         $this->loader->add_action('plugins_loaded', $plugin_i18n, 'load_plugin_textdomain');
     }
 
@@ -291,48 +308,55 @@ class Secure_Aura {
      * @since    3.0.0
      * @access   private
      */
-    private function define_admin_hooks() {
+    private function define_admin_hooks()
+    {
         if (!is_admin()) {
             return;
         }
-        
+
         if (class_exists('Secure_Aura_Admin')) {
             $plugin_admin = new Secure_Aura_Admin($this->get_plugin_name(), $this->get_version(), $this->config);
             $this->components['admin'] = $plugin_admin;
-            
+
             // Admin hooks
             $this->loader->add_action('admin_enqueue_scripts', $plugin_admin, 'enqueue_styles');
             $this->loader->add_action('admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts');
             $this->loader->add_action('admin_menu', $plugin_admin, 'add_admin_menu');
             $this->loader->add_action('admin_init', $plugin_admin, 'init_settings');
             $this->loader->add_action('admin_notices', $plugin_admin, 'show_admin_notices');
-            
+
             // AJAX hooks
             if (class_exists('Secure_Aura_Ajax_Handler')) {
                 $ajax_handler = new Secure_Aura_Ajax_Handler($this);
                 $this->components['ajax'] = $ajax_handler;
-                
+
                 // Security scan AJAX
                 $this->loader->add_action('wp_ajax_secure_aura_run_scan', $ajax_handler, 'handle_run_scan');
                 $this->loader->add_action('wp_ajax_secure_aura_get_scan_status', $ajax_handler, 'handle_get_scan_status');
-                
+
                 // Threat intelligence AJAX
                 $this->loader->add_action('wp_ajax_secure_aura_update_threat_intel', $ajax_handler, 'handle_update_threat_intel');
                 $this->loader->add_action('wp_ajax_secure_aura_get_threat_stats', $ajax_handler, 'handle_get_threat_stats');
-                
+
                 // Firewall AJAX
                 $this->loader->add_action('wp_ajax_secure_aura_update_firewall_rules', $ajax_handler, 'handle_update_firewall_rules');
                 $this->loader->add_action('wp_ajax_secure_aura_block_ip', $ajax_handler, 'handle_block_ip');
                 $this->loader->add_action('wp_ajax_secure_aura_unblock_ip', $ajax_handler, 'handle_unblock_ip');
-                
+
                 // Settings AJAX
                 $this->loader->add_action('wp_ajax_secure_aura_save_settings', $ajax_handler, 'handle_save_settings');
                 $this->loader->add_action('wp_ajax_secure_aura_reset_settings', $ajax_handler, 'handle_reset_settings');
-                
+
                 // Dashboard AJAX
                 $this->loader->add_action('wp_ajax_secure_aura_get_dashboard_data', $ajax_handler, 'handle_get_dashboard_data');
                 $this->loader->add_action('wp_ajax_secure_aura_get_real_time_stats', $ajax_handler, 'handle_get_real_time_stats');
             }
+
+            if (!get_option('secure_aura_setup_complete')) {
+                $setup_wizard = new Secure_Aura_Setup_Wizard();
+            }
+
+            $this->email_notifications = new Secure_Aura_Email_Notifications();
         }
     }
 
@@ -343,36 +367,37 @@ class Secure_Aura {
      * @since    3.0.0
      * @access   private
      */
-    private function define_public_hooks() {
+    private function define_public_hooks()
+    {
         if (class_exists('Secure_Aura_Public')) {
             $plugin_public = new Secure_Aura_Public($this->get_plugin_name(), $this->get_version(), $this->config);
             $this->components['public'] = $plugin_public;
-            
+
             // Public hooks
             $this->loader->add_action('wp_enqueue_scripts', $plugin_public, 'enqueue_styles');
             $this->loader->add_action('wp_enqueue_scripts', $plugin_public, 'enqueue_scripts');
             $this->loader->add_action('init', $plugin_public, 'init_frontend_protection', SECURE_AURA_PRIORITY_HIGHEST);
-            
+
             // Security headers
             $this->loader->add_action('send_headers', $plugin_public, 'add_security_headers');
-            
+
             // Login security
             $this->loader->add_filter('authenticate', $plugin_public, 'authenticate_user', 30, 3);
             $this->loader->add_action('wp_login_failed', $plugin_public, 'handle_failed_login');
             $this->loader->add_action('wp_login', $plugin_public, 'handle_successful_login', 10, 2);
-            
+
             // Comment security
             $this->loader->add_filter('pre_comment_approved', $plugin_public, 'filter_comments', 99, 2);
-            
+
             // File upload security
             $this->loader->add_filter('wp_handle_upload_prefilter', $plugin_public, 'scan_uploaded_files');
         }
-        
+
         // Frontend protection
         if (class_exists('Secure_Aura_Frontend_Protection')) {
             $frontend_protection = new Secure_Aura_Frontend_Protection($this->config);
             $this->components['frontend_protection'] = $frontend_protection;
-            
+
             $this->loader->add_action('init', $frontend_protection, 'init_protection', SECURE_AURA_PRIORITY_HIGHEST);
             $this->loader->add_action('wp_head', $frontend_protection, 'inject_client_protection');
         }
@@ -384,88 +409,107 @@ class Secure_Aura {
      * @since    3.0.0
      * @access   private
      */
-    private function init_security_modules() {
+    private function init_security_modules()
+    {
         $license_type = $this->config['license_type'] ?? SECURE_AURA_LICENSE_FREE;
         $available_features = secure_aura_get_license_features()[$license_type] ?? [];
-        
+
         // Quantum Firewall
-        if (!empty($available_features[SECURE_AURA_FEATURE_QUANTUM_FIREWALL]) && 
-            $this->config['quantum_firewall_enabled'] && 
-            class_exists('Secure_Aura_Quantum_Firewall')) {
-            
+        if (
+            !empty($available_features[SECURE_AURA_FEATURE_QUANTUM_FIREWALL]) &&
+            $this->config['quantum_firewall_enabled'] &&
+            class_exists('Secure_Aura_Quantum_Firewall')
+        ) {
+
             $this->modules['quantum_firewall'] = new Secure_Aura_Quantum_Firewall($this->config);
             $this->loader->add_action('init', $this->modules['quantum_firewall'], 'init_firewall', SECURE_AURA_PRIORITY_HIGHEST);
         }
-        
+
         // AI Threat Engine
-        if (!empty($available_features[SECURE_AURA_FEATURE_AI_THREAT_ENGINE]) && 
-            $this->config['ai_threat_detection_enabled'] && 
-            class_exists('Secure_Aura_AI_Threat_Engine')) {
-            
+        if (
+            !empty($available_features[SECURE_AURA_FEATURE_AI_THREAT_ENGINE]) &&
+            $this->config['ai_threat_detection_enabled'] &&
+            class_exists('Secure_Aura_AI_Threat_Engine')
+        ) {
+
             $this->modules['ai_threat_engine'] = new Secure_Aura_AI_Threat_Engine($this->config);
             $this->loader->add_action('init', $this->modules['ai_threat_engine'], 'init_ai_engine');
         }
-        
+
         // Behavioral Monitor
-        if (!empty($available_features[SECURE_AURA_FEATURE_BEHAVIORAL_MONITOR]) && 
-            $this->config['behavioral_monitoring_enabled'] && 
-            class_exists('Secure_Aura_Behavioral_Monitor')) {
-            
+        if (
+            !empty($available_features[SECURE_AURA_FEATURE_BEHAVIORAL_MONITOR]) &&
+            $this->config['behavioral_monitoring_enabled'] &&
+            class_exists('Secure_Aura_Behavioral_Monitor')
+        ) {
+
             $this->modules['behavioral_monitor'] = new Secure_Aura_Behavioral_Monitor($this->config);
             $this->loader->add_action('init', $this->modules['behavioral_monitor'], 'start_monitoring');
         }
-        
+
         // Malware Scanner (always available)
         if ($this->config['real_time_scanning_enabled'] && class_exists('Secure_Aura_Malware_Scanner')) {
             $this->modules['malware_scanner'] = new Secure_Aura_Malware_Scanner($this->config);
             $this->loader->add_action('init', $this->modules['malware_scanner'], 'init_scanner');
         }
-        
+
         // Threat Intelligence
-        if (!empty($available_features[SECURE_AURA_FEATURE_THREAT_INTELLIGENCE]) && 
-            class_exists('Secure_Aura_Threat_Intelligence')) {
-            
+        if (
+            !empty($available_features[SECURE_AURA_FEATURE_THREAT_INTELLIGENCE]) &&
+            class_exists('Secure_Aura_Threat_Intelligence')
+        ) {
+
             $this->modules['threat_intelligence'] = new Secure_Aura_Threat_Intelligence($this->config);
             $this->loader->add_action('init', $this->modules['threat_intelligence'], 'init_threat_feeds');
         }
-        
+
         // File Integrity Monitor
-        if ($this->config['file_integrity_monitoring_enabled'] && 
-            class_exists('Secure_Aura_File_Integrity')) {
-            
+        if (
+            $this->config['file_integrity_monitoring_enabled'] &&
+            class_exists('Secure_Aura_File_Integrity')
+        ) {
+
             $this->modules['file_integrity'] = new Secure_Aura_File_Integrity($this->config);
             $this->loader->add_action('init', $this->modules['file_integrity'], 'start_monitoring');
         }
-        
+
         // Database Protection
-        if ($this->config['database_protection'] && 
-            class_exists('Secure_Aura_Database_Protection')) {
-            
+        if (
+            $this->config['database_protection'] &&
+            class_exists('Secure_Aura_Database_Protection')
+        ) {
+
             $this->modules['database_protection'] = new Secure_Aura_Database_Protection($this->config);
             $this->loader->add_action('init', $this->modules['database_protection'], 'init_protection', SECURE_AURA_PRIORITY_HIGH);
         }
-        
+
         // Incident Response
-        if (!empty($available_features[SECURE_AURA_FEATURE_INCIDENT_RESPONSE]) && 
-            class_exists('Secure_Aura_Incident_Response')) {
-            
+        if (
+            !empty($available_features[SECURE_AURA_FEATURE_INCIDENT_RESPONSE]) &&
+            class_exists('Secure_Aura_Incident_Response')
+        ) {
+
             $this->modules['incident_response'] = new Secure_Aura_Incident_Response($this->config);
             $this->loader->add_action('init', $this->modules['incident_response'], 'init_response_system');
         }
-        
+
         // Compliance Manager
-        if (!empty($available_features[SECURE_AURA_FEATURE_COMPLIANCE_MONITORING]) && 
-            $this->config['compliance_monitoring'] && 
-            class_exists('Secure_Aura_Compliance_Manager')) {
-            
+        if (
+            !empty($available_features[SECURE_AURA_FEATURE_COMPLIANCE_MONITORING]) &&
+            $this->config['compliance_monitoring'] &&
+            class_exists('Secure_Aura_Compliance_Manager')
+        ) {
+
             $this->modules['compliance_manager'] = new Secure_Aura_Compliance_Manager($this->config);
             $this->loader->add_action('init', $this->modules['compliance_manager'], 'init_compliance_monitoring');
         }
-        
+
         // Performance Monitor
-        if ($this->config['performance_monitoring'] && 
-            class_exists('Secure_Aura_Performance_Monitor')) {
-            
+        if (
+            $this->config['performance_monitoring'] &&
+            class_exists('Secure_Aura_Performance_Monitor')
+        ) {
+
             $this->modules['performance_monitor'] = new Secure_Aura_Performance_Monitor($this->config);
             $this->loader->add_action('init', $this->modules['performance_monitor'], 'start_monitoring');
         }
@@ -477,11 +521,12 @@ class Secure_Aura {
      * @since    3.0.0
      * @access   private
      */
-    private function init_api_endpoints() {
+    private function init_api_endpoints()
+    {
         if (class_exists('Secure_Aura_API_Manager')) {
             $api_manager = new Secure_Aura_API_Manager($this);
             $this->components['api_manager'] = $api_manager;
-            
+
             $this->loader->add_action('rest_api_init', $api_manager, 'register_endpoints');
         }
     }
@@ -492,37 +537,38 @@ class Secure_Aura {
      * @since    3.0.0
      * @access   private
      */
-    private function schedule_background_tasks() {
+    private function schedule_background_tasks()
+    {
         // Schedule threat intelligence updates
         if (!wp_next_scheduled(SECURE_AURA_CRON_THREAT_INTEL_UPDATE)) {
             wp_schedule_event(time(), 'hourly', SECURE_AURA_CRON_THREAT_INTEL_UPDATE);
         }
-        
+
         // Schedule full system scans
         if ($this->config['scan_frequency'] !== 'manual' && !wp_next_scheduled(SECURE_AURA_CRON_FULL_SCAN)) {
             wp_schedule_event(time(), $this->config['scan_frequency'], SECURE_AURA_CRON_FULL_SCAN);
         }
-        
+
         // Schedule log cleanup
         if (!wp_next_scheduled(SECURE_AURA_CRON_LOG_CLEANUP)) {
             wp_schedule_event(time(), 'daily', SECURE_AURA_CRON_LOG_CLEANUP);
         }
-        
+
         // Schedule cache cleanup
         if (!wp_next_scheduled(SECURE_AURA_CRON_CACHE_CLEANUP)) {
             wp_schedule_event(time(), 'daily', SECURE_AURA_CRON_CACHE_CLEANUP);
         }
-        
+
         // Schedule performance checks
         if ($this->config['performance_monitoring'] && !wp_next_scheduled(SECURE_AURA_CRON_PERFORMANCE_CHECK)) {
             wp_schedule_event(time(), 'hourly', SECURE_AURA_CRON_PERFORMANCE_CHECK);
         }
-        
+
         // Schedule file integrity checks
         if ($this->config['file_integrity_monitoring_enabled'] && !wp_next_scheduled(SECURE_AURA_CRON_INTEGRITY_CHECK)) {
             wp_schedule_event(time(), 'twicedaily', SECURE_AURA_CRON_INTEGRITY_CHECK);
         }
-        
+
         // Register cron hooks
         $this->loader->add_action(SECURE_AURA_CRON_THREAT_INTEL_UPDATE, $this, 'cron_update_threat_intelligence');
         $this->loader->add_action(SECURE_AURA_CRON_FULL_SCAN, $this, 'cron_run_full_scan');
@@ -537,19 +583,20 @@ class Secure_Aura {
      *
      * @since    3.0.0
      */
-    public function run() {
+    public function run()
+    {
         $this->loader->run();
-        
+
         // Validate that required classes are loaded
         if (!$this->loader->validate_required_classes()) {
             return false;
         }
-        
+
         // Initialize emergency mode if needed
         if ($this->config['emergency_mode']) {
             $this->activate_emergency_mode();
         }
-        
+
         // Log plugin initialization
         $this->log_event(SECURE_AURA_EVENT_CONFIGURATION_CHANGE, [
             'action' => 'plugin_initialized',
@@ -557,7 +604,7 @@ class Secure_Aura {
             'security_level' => $this->config['security_level'],
             'modules_loaded' => array_keys($this->modules)
         ], SECURE_AURA_SEVERITY_INFO);
-        
+
         return true;
     }
 
@@ -568,7 +615,8 @@ class Secure_Aura {
      * @since     3.0.0
      * @return    string    The name of the plugin.
      */
-    public function get_plugin_name() {
+    public function get_plugin_name()
+    {
         return $this->plugin_name;
     }
 
@@ -578,7 +626,8 @@ class Secure_Aura {
      * @since     3.0.0
      * @return    Secure_Aura_Loader    Orchestrates the hooks of the plugin.
      */
-    public function get_loader() {
+    public function get_loader()
+    {
         return $this->loader;
     }
 
@@ -588,7 +637,8 @@ class Secure_Aura {
      * @since     3.0.0
      * @return    string    The version number of the plugin.
      */
-    public function get_version() {
+    public function get_version()
+    {
         return $this->version;
     }
 
@@ -599,11 +649,12 @@ class Secure_Aura {
      * @param     string    $key    Configuration key (optional).
      * @return    mixed     Configuration value or full config array.
      */
-    public function get_config($key = null) {
+    public function get_config($key = null)
+    {
         if ($key === null) {
             return $this->config;
         }
-        
+
         return $this->config[$key] ?? null;
     }
 
@@ -615,7 +666,8 @@ class Secure_Aura {
      * @param     mixed           $value    Configuration value (if key is string).
      * @return    bool            True on success, false on failure.
      */
-    public function set_config($key, $value = null) {
+    public function set_config($key, $value = null)
+    {
         if (is_array($key)) {
             // Update multiple config values
             $this->config = array_merge($this->config, $key);
@@ -623,13 +675,13 @@ class Secure_Aura {
             // Update single config value
             $this->config[$key] = $value;
         }
-        
+
         // Save to database
         $result = update_option('secure_aura_settings', $this->config);
-        
+
         // Apply filters
         $this->config = apply_filters('secure_aura_config_updated', $this->config);
-        
+
         return $result;
     }
 
@@ -640,7 +692,8 @@ class Secure_Aura {
      * @param     string    $module_name    The name of the module.
      * @return    object|null    The module instance or null if not found.
      */
-    public function get_module($module_name) {
+    public function get_module($module_name)
+    {
         return $this->modules[$module_name] ?? null;
     }
 
@@ -650,7 +703,8 @@ class Secure_Aura {
      * @since     3.0.0
      * @return    array    Array of loaded modules.
      */
-    public function get_modules() {
+    public function get_modules()
+    {
         return $this->modules;
     }
 
@@ -661,7 +715,8 @@ class Secure_Aura {
      * @param     string    $component_name    The name of the component.
      * @return    object|null    The component instance or null if not found.
      */
-    public function get_component($component_name) {
+    public function get_component($component_name)
+    {
         return $this->components[$component_name] ?? null;
     }
 
@@ -671,7 +726,8 @@ class Secure_Aura {
      * @since     3.0.0
      * @return    Secure_Aura_Database_Manager|null    Database manager instance.
      */
-    public function get_database_manager() {
+    public function get_database_manager()
+    {
         return $this->db_manager;
     }
 
@@ -684,11 +740,12 @@ class Secure_Aura {
      * @param     string    $severity      Event severity.
      * @return    bool      True on success, false on failure.
      */
-    public function log_event($event_type, $data = [], $severity = SECURE_AURA_SEVERITY_MEDIUM) {
+    public function log_event($event_type, $data = [], $severity = SECURE_AURA_SEVERITY_MEDIUM)
+    {
         if ($this->db_manager) {
             return $this->db_manager->log_event($event_type, $data, $severity);
         }
-        
+
         return false;
     }
 
@@ -698,7 +755,8 @@ class Secure_Aura {
      * @since     3.0.0
      * @return    bool    True on success, false on failure.
      */
-    public function activate_emergency_mode() {
+    public function activate_emergency_mode()
+    {
         // Update configuration
         $emergency_config = [
             'emergency_mode' => true,
@@ -711,12 +769,12 @@ class Secure_Aura {
             'tor_blocking_enabled' => true,
             'vpn_blocking_enabled' => true,
         ];
-        
+
         $this->set_config($emergency_config);
-        
+
         // Reinitialize security modules with new settings
         $this->reinitialize_modules();
-        
+
         // Log emergency activation
         $this->log_event(SECURE_AURA_EVENT_EMERGENCY_MODE, [
             'action' => 'activated',
@@ -724,10 +782,10 @@ class Secure_Aura {
             'ip_address' => $this->get_client_ip(),
             'timestamp' => current_time('mysql')
         ], SECURE_AURA_SEVERITY_CRITICAL);
-        
+
         // Send notification
         $this->send_emergency_notification('Emergency mode activated');
-        
+
         return true;
     }
 
@@ -737,7 +795,8 @@ class Secure_Aura {
      * @since     3.0.0
      * @return    bool    True on success, false on failure.
      */
-    public function deactivate_emergency_mode() {
+    public function deactivate_emergency_mode()
+    {
         // Restore normal configuration
         $normal_config = [
             'emergency_mode' => false,
@@ -745,12 +804,12 @@ class Secure_Aura {
             'ai_threat_threshold' => 0.7,
             'behavioral_anomaly_threshold' => 0.8,
         ];
-        
+
         $this->set_config($normal_config);
-        
+
         // Reinitialize modules
         $this->reinitialize_modules();
-        
+
         // Log emergency deactivation
         $this->log_event(SECURE_AURA_EVENT_EMERGENCY_MODE, [
             'action' => 'deactivated',
@@ -758,7 +817,7 @@ class Secure_Aura {
             'ip_address' => $this->get_client_ip(),
             'timestamp' => current_time('mysql')
         ], SECURE_AURA_SEVERITY_HIGH);
-        
+
         return true;
     }
 
@@ -768,12 +827,13 @@ class Secure_Aura {
      * @since     3.0.0
      * @access    private
      */
-    private function reinitialize_modules() {
+    private function reinitialize_modules()
+    {
         foreach ($this->modules as $module_name => $module) {
             if (method_exists($module, 'update_config')) {
                 $module->update_config($this->config);
             }
-            
+
             if (method_exists($module, 'reinitialize')) {
                 $module->reinitialize();
             }
@@ -787,7 +847,8 @@ class Secure_Aura {
      * @param     string    $message    Notification message.
      * @access    private
      */
-    private function send_emergency_notification($message) {
+    private function send_emergency_notification($message)
+    {
         if ($this->config['email_notifications']) {
             $notification_component = $this->get_component('notification');
             if ($notification_component && method_exists($notification_component, 'send_emergency_alert')) {
@@ -802,7 +863,8 @@ class Secure_Aura {
      * @since     3.0.0
      * @return    string    Client IP address.
      */
-    public function get_client_ip() {
+    public function get_client_ip()
+    {
         $ip_headers = [
             'HTTP_CF_CONNECTING_IP',
             'HTTP_X_FORWARDED_FOR',
@@ -812,7 +874,7 @@ class Secure_Aura {
             'HTTP_FORWARDED',
             'REMOTE_ADDR'
         ];
-        
+
         foreach ($ip_headers as $header) {
             if (!empty($_SERVER[$header])) {
                 $ip = trim(explode(',', $_SERVER[$header])[0]);
@@ -821,7 +883,7 @@ class Secure_Aura {
                 }
             }
         }
-        
+
         return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
     }
 
@@ -830,7 +892,8 @@ class Secure_Aura {
      *
      * @since     3.0.0
      */
-    public function cron_update_threat_intelligence() {
+    public function cron_update_threat_intelligence()
+    {
         $threat_intel = $this->get_module('threat_intelligence');
         if ($threat_intel && method_exists($threat_intel, 'update_feeds')) {
             $threat_intel->update_feeds();
@@ -842,7 +905,8 @@ class Secure_Aura {
      *
      * @since     3.0.0
      */
-    public function cron_run_full_scan() {
+    public function cron_run_full_scan()
+    {
         $scanner = $this->get_module('malware_scanner');
         if ($scanner && method_exists($scanner, 'run_full_scan')) {
             $scanner->run_full_scan();
@@ -854,7 +918,8 @@ class Secure_Aura {
      *
      * @since     3.0.0
      */
-    public function cron_cleanup_logs() {
+    public function cron_cleanup_logs()
+    {
         if ($this->db_manager && method_exists($this->db_manager, 'cleanup_old_logs')) {
             $retention_days = $this->config['log_retention_days'] ?? 90;
             $this->db_manager->cleanup_old_logs($retention_days);
@@ -866,7 +931,8 @@ class Secure_Aura {
      *
      * @since     3.0.0
      */
-    public function cron_cleanup_cache() {
+    public function cron_cleanup_cache()
+    {
         $cache_manager = $this->get_component('cache_manager');
         if ($cache_manager && method_exists($cache_manager, 'cleanup_expired_cache')) {
             $cache_manager->cleanup_expired_cache();
@@ -878,7 +944,8 @@ class Secure_Aura {
      *
      * @since     3.0.0
      */
-    public function cron_performance_check() {
+    public function cron_performance_check()
+    {
         $performance_monitor = $this->get_module('performance_monitor');
         if ($performance_monitor && method_exists($performance_monitor, 'run_performance_check')) {
             $performance_monitor->run_performance_check();
@@ -890,7 +957,8 @@ class Secure_Aura {
      *
      * @since     3.0.0
      */
-    public function cron_integrity_check() {
+    public function cron_integrity_check()
+    {
         $file_integrity = $this->get_module('file_integrity');
         if ($file_integrity && method_exists($file_integrity, 'run_integrity_check')) {
             $file_integrity->run_integrity_check();
@@ -903,7 +971,8 @@ class Secure_Aura {
      * @since     3.0.0
      * @return    array    Plugin status information.
      */
-    public function get_plugin_status() {
+    public function get_plugin_status()
+    {
         return [
             'version' => $this->version,
             'security_level' => $this->config['security_level'],
@@ -924,10 +993,11 @@ class Secure_Aura {
      * @param     string    $feature    Feature name.
      * @return    bool      True if feature is available, false otherwise.
      */
-    public function is_feature_available($feature) {
+    public function is_feature_available($feature)
+    {
         $license_type = $this->config['license_type'] ?? SECURE_AURA_LICENSE_FREE;
         $features = secure_aura_get_license_features()[$license_type] ?? [];
-        
+
         return !empty($features[$feature]);
     }
 
@@ -936,7 +1006,8 @@ class Secure_Aura {
      *
      * @since     3.0.0
      */
-    public function cleanup() {
+    public function cleanup()
+    {
         // Clear scheduled cron jobs
         wp_clear_scheduled_hook(SECURE_AURA_CRON_THREAT_INTEL_UPDATE);
         wp_clear_scheduled_hook(SECURE_AURA_CRON_FULL_SCAN);
@@ -944,21 +1015,21 @@ class Secure_Aura {
         wp_clear_scheduled_hook(SECURE_AURA_CRON_CACHE_CLEANUP);
         wp_clear_scheduled_hook(SECURE_AURA_CRON_PERFORMANCE_CHECK);
         wp_clear_scheduled_hook(SECURE_AURA_CRON_INTEGRITY_CHECK);
-        
+
         // Cleanup modules
         foreach ($this->modules as $module) {
             if (method_exists($module, 'cleanup')) {
                 $module->cleanup();
             }
         }
-        
+
         // Cleanup components
         foreach ($this->components as $component) {
             if (method_exists($component, 'cleanup')) {
                 $component->cleanup();
             }
         }
-        
+
         // Cleanup loader
         if ($this->loader && method_exists($this->loader, 'cleanup')) {
             $this->loader->cleanup();

@@ -79,6 +79,9 @@ class Secure_Aura_Activator
         // Send activation notification
         self::send_activation_notification();
 
+        $cron_manager = new Secure_Aura_Cron_Manager();
+        $cron_manager->setup_cron_jobs();
+
         // Set activation flag
         update_option('secure_aura_activated', true);
         update_option('secure_aura_activation_time', current_time('mysql'));
